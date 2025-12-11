@@ -169,15 +169,9 @@ const wikiDocuments = createListResource({
     doctype: 'Wiki Document',
     fields: ['name', 'title', 'is_group', 'route', 'is_published', 'parent_wiki_document'],
     insert: {
-        onSuccess(data) {
+        onSuccess() {
             toast.success(createIsGroup.value ? __('Group created') : __('Page created'));
-            
-            // Navigate to edit page for new pages (not groups)
-            if (!createIsGroup.value && data.name) {
-                router.push({ name: 'WikiDocument', params: { pageId: data.name } });
-            } else {
-                emit('refresh');
-            }
+            emit('refresh');
         },
         onError(error) {
             toast.error(error.messages?.[0] || __('Error creating document'));
