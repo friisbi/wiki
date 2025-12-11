@@ -1373,6 +1373,11 @@
   dependencies:
     mini-svg-data-uri "^1.2.3"
 
+"@tailwindcss/line-clamp@^0.4.4":
+  version "0.4.4"
+  resolved "https://registry.yarnpkg.com/@tailwindcss/line-clamp/-/line-clamp-0.4.4.tgz#767cf8e5d528a5d90c9740ca66eb079f5e87d423"
+  integrity sha512-5U6SY5z8N42VtrCrKlsTAA35gy2VSyYtHWCsg1H87NU1SXnEfekTVlrga9fzUDrrHcGi2Lb5KenUWb4lRQT5/g==
+
 "@tailwindcss/typography@^0.5.16":
   version "0.5.16"
   resolved "https://registry.yarnpkg.com/@tailwindcss/typography/-/typography-0.5.16.tgz#a926c8f44d5c439b2915e231cad80058850047c6"
@@ -2549,17 +2554,19 @@ fraction.js@^4.1.2:
   resolved "https://registry.yarnpkg.com/fraction.js/-/fraction.js-4.1.2.tgz#13e420a92422b6cf244dff8690ed89401029fbe8"
   integrity sha512-o2RiJQ6DZaR/5+Si0qJUIy637QMRudSi9kU/FFzx9EZazrIdnBgpU+3sEWCxAVhH2RtxW2Oz+T4p2o8uOPVcgA==
 
-frappe-ui@^0.1.192:
-  version "0.1.192"
-  resolved "https://registry.yarnpkg.com/frappe-ui/-/frappe-ui-0.1.192.tgz#0fe43df66e891d84613882ddb1becf1de3415569"
-  integrity sha512-TIo5x7sH3ugES/nnGzb2l4LeZfQN22D2yvnqZJYW52du0Y6ePWz2OtxxhqJQ+uXR9P0cowzZRMljcWHvIz8h3A==
+frappe-ui@^0.1.235:
+  version "0.1.235"
+  resolved "https://registry.yarnpkg.com/frappe-ui/-/frappe-ui-0.1.235.tgz#10b46f07454229de4bc04deb8ab6fe93f58bfd32"
+  integrity sha512-z4lOMR6uvYTtva3+wuKNfmYCNcja7xUZ2Mjk2DGD/t0izDTG1IFsfhXMChnFqKllQjpw33k+APeeMih0/pc8hA==
   dependencies:
     "@floating-ui/vue" "^1.1.6"
     "@headlessui/vue" "^1.7.14"
     "@popperjs/core" "^2.11.2"
     "@tailwindcss/forms" "^0.5.3"
+    "@tailwindcss/line-clamp" "^0.4.4"
     "@tailwindcss/typography" "^0.5.16"
     "@tiptap/core" "^2.26.1"
+    "@tiptap/extension-code" "^2.26.1"
     "@tiptap/extension-code-block" "^2.26.1"
     "@tiptap/extension-code-block-lowlight" "^2.26.1"
     "@tiptap/extension-color" "^2.26.1"
@@ -2596,7 +2603,7 @@ frappe-ui@^0.1.192:
     ora "5.4.1"
     prettier "^3.3.2"
     radix-vue "^1.5.3"
-    reka-ui "^2.0.2"
+    reka-ui "^2.5.0"
     socket.io-client "^4.5.1"
     tippy.js "^6.3.7"
     typescript "^5.0.2"
@@ -3953,10 +3960,10 @@ readdirp@~3.6.0:
   dependencies:
     picomatch "^2.2.1"
 
-reka-ui@^2.0.2:
-  version "2.3.1"
-  resolved "https://registry.yarnpkg.com/reka-ui/-/reka-ui-2.3.1.tgz#1a5f465eaaba82be30904e459f4fdc62a3d864dc"
-  integrity sha512-2SjGeybd7jvD8EQUkzjgg7GdOQdf4cTwdVMq/lDNTMqneUFNnryGO43dg8WaM/jaG9QpSCZBvstfBFWlDdb2Zg==
+reka-ui@^2.5.0:
+  version "2.6.1"
+  resolved "https://registry.yarnpkg.com/reka-ui/-/reka-ui-2.6.1.tgz#08f6b8a8ee774887b6bcde3d8ea54b608acfe82c"
+  integrity sha512-XK7cJDQoNuGXfCNzBBo/81Yg/OgjPwvbabnlzXG2VsdSgNsT6iIkuPBPr+C0Shs+3bb0x0lbPvgQAhMSCKm5Ww==
   dependencies:
     "@floating-ui/dom" "^1.6.13"
     "@floating-ui/vue" "^1.1.6"
