@@ -64,8 +64,9 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { computed } from 'vue';
 import { useRouter } from 'vue-router';
+import { useStorage } from '@vueuse/core';
 import { Dropdown, Badge, createResource, toast } from 'frappe-ui';
 import LucideChevronRight from '~icons/lucide/chevron-right';
 import LucideFolder from '~icons/lucide/folder';
@@ -86,10 +87,15 @@ const props = defineProps({
 const emit = defineEmits(['create', 'delete', 'refresh']);
 const router = useRouter();
 
-const isExpanded = ref(true);
+// Store expanded state in localStorage, collapsed by default
+const expandedNodes = useStorage('wiki-tree-expanded-nodes', {});
+
+const isExpanded = computed(() => {
+    return expandedNodes.value[props.node.name] === true;
+});
 
 function toggleExpanded() {
-    isExpanded.value = !isExpanded.value;
+    expandedNodes.value[props.node.name] = !expandedNodes.value[props.node.name];
 }
 
 function handleRowClick() {

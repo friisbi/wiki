@@ -14,6 +14,7 @@
     "@milkdown/crepe": "^7.15.5",
     "@milkdown/kit": "^7.15.5",
     "@milkdown/vue": "^7.15.5",
+    "@vueuse/core": "^14.1.0",
     "feather-icons": "^4.29.2",
     "frappe-ui": "^0.1.235",
     "socket.io-client": "^4.7.2",
