@@ -33,17 +33,16 @@
             </Button>
         </div>
 
-        <!-- Tree View -->
+        <!-- Tree View with Drag and Drop -->
         <div v-else class="border border-outline-gray-2 rounded-lg overflow-hidden">
-            <div v-for="node in treeData.children" :key="node.name">
-                <WikiTreeNode 
-                    :node="node" 
-                    :level="0"
-                    @create="openCreateDialog"
-                    @delete="openDeleteDialog"
-                    @refresh="emit('refresh')"
-                />
-            </div>
+            <NestedDraggable
+                :items="treeData.children"
+                :level="0"
+                :parent-name="rootNode"
+                @create="openCreateDialog"
+                @delete="openDeleteDialog"
+                @update="handleTreeUpdate"
+            />
         </div>
 
         <!-- Create Dialog -->
@@ -127,8 +126,8 @@
 <script setup>
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { createListResource, createDocumentResource, toast } from 'frappe-ui';
-import WikiTreeNode from './WikiTreeNode.vue';
+import { createListResource, createDocumentResource, createResource, toast } from 'frappe-ui';
+import NestedDraggable from './NestedDraggable.vue';
 import LucideFolderPlus from '~icons/lucide/folder-plus';
 import LucideFilePlus from '~icons/lucide/file-plus';
 import LucideFileText from '~icons/lucide/file-text';
@@ -178,6 +177,36 @@ const wikiDocuments = createListResource({
         },
     },
 });
+
+// Reorder Resource
+const reorderResource = createResource({
+    url: '/api/method/wiki.api.reorder_wiki_documents',
+    onSuccess() {
+        toast.success(__('Documents reordered'));
+        emit('refresh');
+    },
+    onError(error) {
+        toast.error(error.messages?.[0] || __('Error reordering documents'));
+        emit('refresh'); // Refresh to reset to server state
+    },
+});
+
+function handleTreeUpdate(payload) {
+    if (payload.type === 'refresh') {
+        emit('refresh');
+        return;
+    }
+    
+    if (payload.type === 'added' || payload.type === 'moved') {
+        const siblingNames = payload.siblings.map(s => s.name);
+        reorderResource.submit({
+            doc_name: payload.item.name,
+            new_parent: payload.newParent,
+            new_index: payload.newIndex,
+            siblings: JSON.stringify(siblingNames),
+        });
+    }
+}
 
 function openCreateDialog(parentName, isGroup) {
     createParent.value = parentName;

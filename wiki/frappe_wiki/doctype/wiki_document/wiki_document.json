@@ -17,7 +17,8 @@
 		"rgt",
 		"is_group",
 		"old_parent",
-		"parent_wiki_document"
+		"parent_wiki_document",
+		"sort_order"
 	],
 	"fields": [
 		{
@@ -59,6 +60,14 @@
 			"ignore_user_permissions": 1,
 			"label": "Parent Wiki Document",
 			"options": "Wiki Document"
+		},
+		{
+			"default": "0",
+			"fieldname": "sort_order",
+			"fieldtype": "Int",
+			"hidden": 1,
+			"label": "Sort Order",
+			"no_copy": 1
 		},
 		{
 			"fieldname": "route",
