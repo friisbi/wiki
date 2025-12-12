@@ -73,6 +73,7 @@
 
 <script setup>
 import { ref, reactive, watch } from "vue";
+import { useRouter } from "vue-router";
 import {
   ListView,
   createListResource,
@@ -80,8 +81,11 @@ import {
   Dialog,
   FormControl,
   ErrorMessage,
+  toast
 } from "frappe-ui";
 import LucidePlus from "~icons/lucide/plus";
+
+const router = useRouter();
 
 const showCreateDialog = ref(false);
 const routeManuallyEdited = ref(false);
@@ -136,11 +140,13 @@ const spaces = createListResource({
   pageLength: 20,
   auto: true,
   insert: {
-    onSuccess: () => {
+    onSuccess: (doc) => {
       showCreateDialog.value = false;
       newSpace.space_name = "";
       newSpace.route = "";
       routeManuallyEdited.value = false;
+      toast.success(__('Wiki Space "{0}" created successfully.', [doc.space_name]));
+      router.push({ name: "SpaceDetails", params: { spaceId: doc.name } });
     },
   },
 });
