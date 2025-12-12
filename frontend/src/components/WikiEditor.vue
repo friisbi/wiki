@@ -73,31 +73,45 @@ async function dragDropUploader(files, schema) {
         const file = files.item(i);
         if (!file) continue;
         
-        // Only handle image files
-        if (!file.type.includes('image')) {
-            toast.warning(`Skipped non-image file: ${file.name}`);
+        const isImage = file.type.includes('image');
+        const isVideo = file.type.includes('video');
+        
+        // Only handle image and video files
+        if (!isImage && !isVideo) {
+            toast.warning(`Skipped unsupported file: ${file.name}`);
             continue;
         }
         
         try {
             const result = await fileUploader.upload(file, {
                 private: false,
-                optimize: true
+                optimize: isImage // Only optimize images, not videos
             });
             
-            // Create an image node with the uploaded URL
-            const imageNode = schema.nodes.image.createAndFill({
-                src: result.file_url,
-                alt: file.name
-            });
-            
-            if (imageNode) {
-                nodes.push(imageNode);
+            if (isImage) {
+                // Create an image node for image files
+                const imageNode = schema.nodes.image.createAndFill({
+                    src: result.file_url,
+                    alt: file.name
+                });
+                
+                if (imageNode) {
+                    nodes.push(imageNode);
+                }
+            } else if (isVideo) {
+                // Create a link node for video files (renders as clickable link)
+                // Format: [filename](url)
+                const linkMark = schema.marks.link.create({ href: result.file_url });
+                const textNode = schema.text(file.name, [linkMark]);
+                
+                if (textNode) {
+                    nodes.push(textNode);
+                }
             }
             
             toast.success(`Uploaded: ${file.name}`);
         } catch (error) {
-            console.error('Image upload failed:', error);
+            console.error('File upload failed:', error);
             toast.error(`Failed to upload: ${file.name}`);
         }
     }
