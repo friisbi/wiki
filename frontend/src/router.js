@@ -29,11 +29,6 @@ const routes = [
 				component: () => import('@/components/WikiDocumentPanel.vue'),
 				props: true,
 			},
-			{
-				path: 'settings',
-				name: 'SpaceSettings',
-				component: () => import('@/components/SpaceSettings.vue'),
-			},
 		],
 	},
 ];

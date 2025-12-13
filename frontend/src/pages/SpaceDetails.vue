@@ -7,50 +7,29 @@
         >
             <!-- Header -->
             <div class="p-4 border-b border-outline-gray-2">
-                <Button
-                    variant="ghost"
-                    class="mb-3"
-                    icon-left="arrow-left"
-                    :route="{ name: 'SpaceList' }"
-                >
-                    {{ __('Back to Spaces') }}
-                </Button>
+                <div class="flex items-center justify-between mb-3">
+                    <Button
+                        variant="ghost"
+                        icon-left="arrow-left"
+                        :route="{ name: 'SpaceList' }"
+                    >
+                        {{ __('Back to Spaces') }}
+                    </Button>
+                    <Button
+                        variant="ghost"
+                        icon="settings"
+                        :title="__('Settings')"
+                        @click="showSettingsDialog = true"
+                    />
+                </div>
                 <h1 class="text-lg font-semibold text-ink-gray-9">
                     {{ space.doc?.space_name || spaceId }}
                 </h1>
                 <p class="text-sm text-ink-gray-5 mt-0.5">{{ space.doc?.route }}</p>
             </div>
 
-            <!-- Navigation Tabs -->
-            <div class="flex border-b border-outline-gray-2">
-                <button
-                    class="flex-1 px-4 py-2.5 text-sm font-medium transition-colors"
-                    :class="isOnPages
-                        ? 'text-ink-gray-9 border-b-2 border-ink-gray-9'
-                        : 'text-ink-gray-5 hover:text-ink-gray-7'"
-                    @click="goToPages"
-                >
-                    <span class="flex items-center justify-center gap-2">
-                        <LucideFileText class="size-4" />
-                        {{ __('Pages') }}
-                    </span>
-                </button>
-                <button
-                    class="flex-1 px-4 py-2.5 text-sm font-medium transition-colors"
-                    :class="isOnSettings
-                        ? 'text-ink-gray-9 border-b-2 border-ink-gray-9'
-                        : 'text-ink-gray-5 hover:text-ink-gray-7'"
-                    @click="goToSettings"
-                >
-                    <span class="flex items-center justify-center gap-2">
-                        <LucideSettings class="size-4" />
-                        {{ __('Settings') }}
-                    </span>
-                </button>
-            </div>
-
-            <!-- Document Tree (only when on Pages) -->
-            <div v-if="isOnPages && space.doc && wikiTree.data" class="flex-1 overflow-auto p-2">
+            <!-- Document Tree -->
+            <div v-if="space.doc && wikiTree.data" class="flex-1 overflow-auto p-2">
                 <WikiDocumentList
                     :tree-data="wikiTree.data"
                     :space-id="spaceId"
@@ -75,16 +54,35 @@
                 @refresh="wikiTree.reload()"
             />
         </main>
+
+        <!-- Settings Dialog -->
+        <Dialog v-model="showSettingsDialog">
+            <template #body-title>
+                <h3 class="text-xl font-semibold text-ink-gray-9">
+                    {{ __('Space Settings') }}
+                </h3>
+            </template>
+            <template #body-content>
+                <div class="flex flex-col items-center justify-center py-8">
+                    <LucideSettings class="size-12 text-ink-gray-4 mb-4" />
+                    <p class="text-sm text-ink-gray-5">{{ __('Space settings coming soon') }}</p>
+                </div>
+            </template>
+            <template #actions="{ close }">
+                <div class="flex justify-end">
+                    <Button variant="outline" @click="close">{{ __('Close') }}</Button>
+                </div>
+            </template>
+        </Dialog>
     </div>
 </template>
 
 <script setup>
 import { ref, computed, onUnmounted } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
+import { useRoute } from 'vue-router';
 import { useStorage } from '@vueuse/core';
-import { createDocumentResource, createResource, Button } from 'frappe-ui';
+import { createDocumentResource, createResource, Button, Dialog } from 'frappe-ui';
 import WikiDocumentList from '../components/WikiDocumentList.vue';
-import LucideFileText from '~icons/lucide/file-text';
 import LucideSettings from '~icons/lucide/settings';
 
 const props = defineProps({
@@ -95,7 +93,9 @@ const props = defineProps({
 });
 
 const route = useRoute();
-const router = useRouter();
+
+// Settings dialog state
+const showSettingsDialog = ref(false);
 
 // Sidebar resize state
 const MIN_WIDTH = 200;
@@ -134,19 +134,6 @@ onUnmounted(() => {
 
 // Compute current page from route params
 const currentPageId = computed(() => route.params.pageId || null);
-
-// Determine which section is active
-const isOnSettings = computed(() => route.name === 'SpaceSettings');
-const isOnPages = computed(() => !isOnSettings.value);
-
-// Navigation functions
-function goToPages() {
-    router.push({ name: 'SpaceDetails', params: { spaceId: props.spaceId } });
-}
-
-function goToSettings() {
-    router.push({ name: 'SpaceSettings', params: { spaceId: props.spaceId } });
-}
 
 const space = createDocumentResource({
     doctype: 'Wiki Space',
