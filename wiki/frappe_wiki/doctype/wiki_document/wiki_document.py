@@ -36,7 +36,48 @@ class WikiDocument(NestedSet):
 
 	def set_route(self):
 		if not self.route:
-			self.route = frappe.website.utils.cleanup_page_name(self.title).replace("_", "-")
+			# Build route from ancestor path
+			route_parts = []
+
+			# For new documents, get_ancestors() won't work as lft/rgt aren't set yet
+			# Use parent_wiki_document to build the ancestor chain
+			ancestors = []
+			if not self.is_new():
+				ancestors = self.get_ancestors()
+			else:
+				# Build ancestor list by traversing parent_wiki_document
+				current_parent = self.parent_wiki_document
+				while current_parent:
+					ancestors.append(current_parent)
+					current_parent = frappe.get_cached_value(
+						"Wiki Document", current_parent, "parent_wiki_document"
+					)
+
+			# Get Wiki Space route as the base
+			root_group = None
+			if ancestors:
+				root_group = ancestors[-1]
+			elif self.parent_wiki_document:
+				root_group = self.parent_wiki_document
+
+			if root_group:
+				space_route = frappe.get_cached_value("Wiki Space", {"root_group": root_group}, "route")
+				if space_route:
+					route_parts.append(space_route)
+
+			if ancestors:
+				# ancestors are ordered from immediate parent to root
+				# Exclude the root group (last item) as it's the Wiki Space root
+				for ancestor_name in reversed(ancestors[:-1]):
+					ancestor_route = frappe.get_cached_value("Wiki Document", ancestor_name, "route")
+					if ancestor_route:
+						route_parts.append(ancestor_route)
+
+			# Add this document's slug
+			slug = frappe.website.utils.cleanup_page_name(self.title).replace("_", "-")
+			route_parts.append(slug)
+
+			self.route = "/".join(route_parts)
 
 	@frappe.whitelist()
 	def get_breadcrumbs(self) -> dict:
