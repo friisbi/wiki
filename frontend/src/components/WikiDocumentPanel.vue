@@ -77,6 +77,7 @@ const props = defineProps({
     }
 });
 
+const emit = defineEmits(['refresh']);
 const editorRef = ref(null);
 
 const wikiDoc = createDocumentResource({
@@ -118,6 +119,7 @@ const publishResource = createResource({
         const action = wikiDoc.doc?.is_published ? __('unpublished') : __('published');
         toast.success(__('Page {0}', [action]));
         wikiDoc.reload();
+        emit('refresh'); // Refresh sidebar tree
     },
     onError(error) {
         toast.error(error.messages?.[0] || __('Error updating publish status'));
