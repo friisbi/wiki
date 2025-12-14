@@ -26,7 +26,7 @@ import LucideMoon from "~icons/lucide/moon";
 import LucideSun from "~icons/lucide/sun";
 import LucideRocket from "~icons/lucide/rocket";
 
-const userTheme = useStorage("user-theme", "dark");
+const userTheme = useStorage("wiki-theme", "dark");
 
 const themeIcon = computed(() => {
 	return userTheme.value === "dark" ? LucideSun : LucideMoon;

@@ -66,6 +66,10 @@
         const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
         const initialIsDark = stored ? stored === 'dark' : prefersDark;
 
+        // Set initial theme on document
+        const initialTheme = initialIsDark ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-theme', initialTheme);
+
         // Theme store for dark/light mode
         Alpine.store('theme', {
             isDark: initialIsDark,
