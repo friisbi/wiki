@@ -43,45 +43,21 @@
         </div>
 
         <!-- Settings Dialog -->
-        <Dialog v-model="showSettingsDialog">
-            <template #body-title>
-                <h3 class="text-xl font-semibold text-ink-gray-9">
-                    {{ __('Page Settings') }}
-                </h3>
-            </template>
-            <template #body-content>
-                <div class="space-y-4">
-                    <FormControl
-                        type="text"
-                        :label="__('Route')"
-                        v-model="settingsForm.route"
-                        :placeholder="__('e.g., docs/getting-started')"
-                    />
-                </div>
-            </template>
-            <template #actions="{ close }">
-                <div class="flex justify-end gap-2">
-                    <Button variant="outline" @click="close">
-                        {{ __('Cancel') }}
-                    </Button>
-                    <Button
-                        variant="solid"
-                        :loading="settingsResource.loading"
-                        @click="saveSettings"
-                    >
-                        {{ __('Save') }}
-                    </Button>
-                </div>
-            </template>
-        </Dialog>
+        <WikiDocumentSettings
+            v-model="showSettingsDialog"
+            :pageId="props.pageId"
+            :doc="wikiDoc.doc"
+            @saved="onSettingsSaved"
+        />
     </div>
 </template>
 
 <script setup>
-import { ref, reactive, computed, watch } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { MilkdownProvider } from "@milkdown/vue";
-import { createDocumentResource, createResource, Badge, Button, Dialog, Dropdown, FormControl, toast } from "frappe-ui";
+import { createDocumentResource, Badge, Button, Dropdown, toast } from "frappe-ui";
 import WikiEditor from './WikiEditor.vue';
+import WikiDocumentSettings from './WikiDocumentSettings.vue';
 import LucideSave from '~icons/lucide/save';
 import LucideMoreVertical from '~icons/lucide/more-vertical';
 
@@ -99,9 +75,6 @@ const props = defineProps({
 const emit = defineEmits(['refresh']);
 const editorRef = ref(null);
 const showSettingsDialog = ref(false);
-const settingsForm = reactive({
-    route: '',
-});
 
 const wikiDoc = createDocumentResource({
     doctype: "Wiki Document",
@@ -154,60 +127,28 @@ const menuOptions = computed(() => {
     return options;
 });
 
-// Publish/Unpublish Resource
-const publishResource = createResource({
-    url: 'frappe.client.set_value',
-    makeParams() {
-        return {
-            doctype: 'Wiki Document',
-            name: props.pageId,
-            fieldname: {
-                is_published: wikiDoc.doc?.is_published ? 0 : 1,
-            },
-        };
-    },
-    onSuccess() {
-        const action = wikiDoc.doc?.is_published ? __('unpublished') : __('published');
-        toast.success(__('Page {0}', [action]));
-        wikiDoc.reload();
-        emit('refresh'); // Refresh sidebar tree
-    },
-    onError(error) {
-        toast.error(error.messages?.[0] || __('Error updating publish status'));
-    },
-});
-
 async function togglePublish() {
-    await publishResource.submit();
+    const newStatus = wikiDoc.doc?.is_published ? 0 : 1;
+    const action = newStatus ? __('published') : __('unpublished');
+
+    try {
+        await wikiDoc.setValue.submit({
+            is_published: newStatus,
+        });
+        toast.success(__('Page {0}', [action]));
+        emit('refresh');
+    } catch (error) {
+        toast.error(error.messages?.[0] || __('Error updating publish status'));
+    }
 }
 
-// Settings Resource
-const settingsResource = createResource({
-    url: 'frappe.client.set_value',
-    onSuccess() {
-        toast.success(__('Settings saved'));
-        showSettingsDialog.value = false;
-        wikiDoc.reload();
-        emit('refresh');
-    },
-    onError(error) {
-        toast.error(error.messages?.[0] || __('Error saving settings'));
-    },
-});
-
 function openSettingsDialog() {
-    settingsForm.route = wikiDoc.doc?.route || '';
     showSettingsDialog.value = true;
 }
 
-function saveSettings() {
-    settingsResource.submit({
-        doctype: 'Wiki Document',
-        name: props.pageId,
-        fieldname: {
-            route: settingsForm.route,
-        },
-    });
+function onSettingsSaved() {
+    wikiDoc.reload();
+    emit('refresh');
 }
 
 function saveFromHeader() {
