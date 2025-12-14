@@ -18,6 +18,15 @@
                 <div class="flex items-center gap-2">
                     <Button
                         variant="outline"
+                        @click="openSettingsDialog"
+                    >
+                        <template #prefix>
+                            <LucideSettings class="size-4" />
+                        </template>
+                        {{ __('Settings') }}
+                    </Button>
+                    <Button
+                        variant="outline"
                         :loading="publishResource.loading"
                         @click="togglePublish"
                     >
@@ -57,18 +66,52 @@
                 </MilkdownProvider>
             </div>
         </div>
+
+        <!-- Settings Dialog -->
+        <Dialog v-model="showSettingsDialog">
+            <template #body-title>
+                <h3 class="text-xl font-semibold text-ink-gray-9">
+                    {{ __('Page Settings') }}
+                </h3>
+            </template>
+            <template #body-content>
+                <div class="space-y-4">
+                    <FormControl
+                        type="text"
+                        :label="__('Route')"
+                        v-model="settingsForm.route"
+                        :placeholder="__('e.g., docs/getting-started')"
+                    />
+                </div>
+            </template>
+            <template #actions="{ close }">
+                <div class="flex justify-end gap-2">
+                    <Button variant="outline" @click="close">
+                        {{ __('Cancel') }}
+                    </Button>
+                    <Button
+                        variant="solid"
+                        :loading="settingsResource.loading"
+                        @click="saveSettings"
+                    >
+                        {{ __('Save') }}
+                    </Button>
+                </div>
+            </template>
+        </Dialog>
     </div>
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue';
+import { ref, reactive, computed, watch } from 'vue';
 import { MilkdownProvider } from "@milkdown/vue";
-import { createDocumentResource, createResource, Badge, Button, toast } from "frappe-ui";
+import { createDocumentResource, createResource, Badge, Button, Dialog, FormControl, toast } from "frappe-ui";
 import WikiEditor from './WikiEditor.vue';
 import LucideExternalLink from '~icons/lucide/external-link';
 import LucideEye from '~icons/lucide/eye';
 import LucideEyeOff from '~icons/lucide/eye-off';
 import LucideSave from '~icons/lucide/save';
+import LucideSettings from '~icons/lucide/settings';
 
 const props = defineProps({
     pageId: {
@@ -83,6 +126,10 @@ const props = defineProps({
 
 const emit = defineEmits(['refresh']);
 const editorRef = ref(null);
+const showSettingsDialog = ref(false);
+const settingsForm = reactive({
+    route: '',
+});
 
 const wikiDoc = createDocumentResource({
     doctype: "Wiki Document",
@@ -132,6 +179,35 @@ const publishResource = createResource({
 
 async function togglePublish() {
     await publishResource.submit();
+}
+
+// Settings Resource
+const settingsResource = createResource({
+    url: 'frappe.client.set_value',
+    onSuccess() {
+        toast.success(__('Settings saved'));
+        showSettingsDialog.value = false;
+        wikiDoc.reload();
+        emit('refresh');
+    },
+    onError(error) {
+        toast.error(error.messages?.[0] || __('Error saving settings'));
+    },
+});
+
+function openSettingsDialog() {
+    settingsForm.route = wikiDoc.doc?.route || '';
+    showSettingsDialog.value = true;
+}
+
+function saveSettings() {
+    settingsResource.submit({
+        doctype: 'Wiki Document',
+        name: props.pageId,
+        fieldname: {
+            route: settingsForm.route,
+        },
+    });
 }
 
 function saveFromHeader() {
