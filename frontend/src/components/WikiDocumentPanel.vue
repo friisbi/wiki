@@ -17,36 +17,6 @@
                 <!-- Actions -->
                 <div class="flex items-center gap-2">
                     <Button
-                        variant="outline"
-                        @click="openSettingsDialog"
-                    >
-                        <template #prefix>
-                            <LucideSettings class="size-4" />
-                        </template>
-                        {{ __('Settings') }}
-                    </Button>
-                    <Button
-                        variant="outline"
-                        :loading="publishResource.loading"
-                        @click="togglePublish"
-                    >
-                        <template #prefix>
-                            <component :is="wikiDoc.doc.is_published ? LucideEyeOff : LucideEye" class="size-4" />
-                        </template>
-                        {{ wikiDoc.doc.is_published ? __('Unpublish') : __('Publish') }}
-                    </Button>
-                    <Button
-                        v-if="wikiDoc.doc.is_published"
-                        variant="outline"
-                        :link="`http://wiki.localhost:8000/${wikiDoc.doc.route}`"
-                        target="_blank"
-                    >
-                        <template #prefix>
-                            <LucideExternalLink class="size-4" />
-                        </template>
-                        {{ __('View Page') }}
-                    </Button>
-                    <Button
                         variant="solid"
                         :loading="wikiDoc.setValue.loading"
                         @click="saveFromHeader"
@@ -56,6 +26,11 @@
                         </template>
                         {{ __('Save') }}
                     </Button>
+                    <Dropdown :options="menuOptions">
+                        <Button variant="outline">
+                            <LucideMoreVertical class="size-4" />
+                        </Button>
+                    </Dropdown>
                 </div>
             </div>
 
@@ -105,13 +80,10 @@
 <script setup>
 import { ref, reactive, computed, watch } from 'vue';
 import { MilkdownProvider } from "@milkdown/vue";
-import { createDocumentResource, createResource, Badge, Button, Dialog, FormControl, toast } from "frappe-ui";
+import { createDocumentResource, createResource, Badge, Button, Dialog, Dropdown, FormControl, toast } from "frappe-ui";
 import WikiEditor from './WikiEditor.vue';
-import LucideExternalLink from '~icons/lucide/external-link';
-import LucideEye from '~icons/lucide/eye';
-import LucideEyeOff from '~icons/lucide/eye-off';
 import LucideSave from '~icons/lucide/save';
-import LucideSettings from '~icons/lucide/settings';
+import LucideMoreVertical from '~icons/lucide/more-vertical';
 
 const props = defineProps({
     pageId: {
@@ -152,6 +124,34 @@ const editorKey = computed(() => {
         return `${props.pageId}-${wikiDoc.doc.modified || 'new'}`;
     }
     return null;
+});
+
+// Dropdown menu options
+const menuOptions = computed(() => {
+    const options = [];
+
+    if (wikiDoc.doc?.is_published) {
+        options.push({
+            label: __('View Page'),
+            icon: 'external-link',
+            onClick: () => window.open(`http://wiki.localhost:8000/${wikiDoc.doc.route}`, '_blank'),
+        });
+    }
+
+    options.push(
+        {
+            label: wikiDoc.doc?.is_published ? __('Unpublish') : __('Publish'),
+            icon: 'upload-cloud',
+            onClick: togglePublish,
+        },
+        {
+            label: __('Settings'),
+            icon: 'settings',
+            onClick: openSettingsDialog,
+        },
+    );
+
+    return options;
 });
 
 // Publish/Unpublish Resource
