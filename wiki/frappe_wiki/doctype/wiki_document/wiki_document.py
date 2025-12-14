@@ -32,7 +32,7 @@ class WikiDocument(NestedSet):
 
 	def set_boilerplate_content(self):
 		if not self.content and not self.is_group:
-			self.content = f"# {self.title}\n\nWelcome to your new wiki page! Start editing this content to add information, images, and more."
+			self.content = "Welcome to your new wiki page! Start editing this content to add information, images, and more."
 
 	def set_route(self):
 		if not self.route:
@@ -175,6 +175,7 @@ class WikiDocumentRenderer(BaseRenderer):
 				"doc": doc,
 				"wiki_space": wiki_space,
 				"rendered_content": content_html,
+				"raw_markdown": doc.content or "",
 				"nested_tree": nested_tree,
 			},
 		)

@@ -1,51 +1,83 @@
 {% from "templates/wiki/macros/sidebar_tree.html" import render_wiki_tree %}
+{% from "templates/wiki/macros/buttons.html" import ghost_button_full, icon_button, render_icon %}
 
-<div class="wiki-sidebar bg-gray-50 border-r border-gray-200 fixed left-0 top-0 h-screen flex flex-col transition-transform duration-300" 
+<div class="wiki-sidebar bg-[var(--surface-gray-1)] border-r border-[var(--outline-gray-1)] fixed left-0 top-0 h-screen flex flex-col transition-all duration-300 overflow-hidden z-40"
      x-data="wikiSidebar()"
-     :class="isCollapsed ? '-translate-x-64' : 'w-72'">
-    
+     :class="isCollapsed ? 'w-0 border-r-0' : 'w-72'"
+     x-cloak
+     x-show="!isCollapsed"
+     x-transition:enter="transition-all duration-300"
+     x-transition:enter-start="w-0 opacity-0"
+     x-transition:enter-end="w-72 opacity-100"
+     x-transition:leave="transition-all duration-300"
+     x-transition:leave-start="w-72 opacity-100"
+     x-transition:leave-end="w-0 opacity-0">
+
     <!-- Fixed Header -->
-    <div class="p-4 border-b border-gray-200 bg-white flex-shrink-0">
-        <div class="flex items-center justify-between">
+    <div class="p-4 border-b border-[var(--outline-gray-1)] bg-[var(--surface-white)] flex-shrink-0">
+        <div class="flex items-center gap-3">
+            {% if wiki_space.light_mode_logo %}
             <img class="size-8" src="{{ wiki_space.light_mode_logo }}"/>
-            <h3 class="text-lg font-semibold text-gray-900">{{ wiki_space.space_name or _("Wiki") }}</h3>
+            {% endif %}
+            <h3 class="text-lg font-semibold text-[var(--ink-gray-9)]">{{ wiki_space.space_name or _("Wiki") }}</h3>
         </div>
     </div>
-    
+
     <!-- Scrollable Navigation -->
     <nav class="py-2 flex-1 overflow-y-auto">
         {{ render_wiki_tree(nested_tree, current_route=doc.route if doc else '') }}
     </nav>
-    
-    <!-- Fixed Collapse Button -->
-    <div class="p-3 border-t border-gray-200 bg-white flex-shrink-0">
-        <button @click="toggleSidebar()" 
-                class="w-full flex items-center justify-center px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors duration-200">
-            <svg class="w-4 h-4 mr-2 transition-transform duration-200" 
-                 :class="isCollapsed ? 'rotate-180' : ''"
-                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-            </svg>
-            <span x-text="isCollapsed ? 'Expand' : 'Collapse'"></span>
+
+    <!-- Fixed Footer with Theme Toggle and Collapse -->
+    <div class="p-3 border-t border-[var(--outline-gray-1)] bg-[var(--surface-white)] flex-shrink-0 space-y-2">
+        <!-- Theme Toggle -->
+        <button @click="$store.theme.toggle()"
+                class="w-full flex items-center justify-center px-3 py-2 text-sm font-medium text-[var(--ink-gray-5)] hover:text-[var(--ink-gray-9)] hover:bg-[var(--surface-gray-2)] rounded-md transition-colors duration-200 cursor-pointer">
+            <template x-if="$store.theme.isDark">
+                {{ render_icon("sun", "mr-2") }}
+            </template>
+            <template x-if="!$store.theme.isDark">
+                {{ render_icon("moon", "mr-2") }}
+            </template>
+            <span x-text="$store.theme.isDark ? 'Light Mode' : 'Dark Mode'"></span>
+        </button>
+
+        <!-- Collapse Button -->
+        <button @click="toggleSidebar()"
+                class="w-full flex items-center justify-center px-3 py-2 text-sm font-medium text-[var(--ink-gray-5)] hover:text-[var(--ink-gray-9)] hover:bg-[var(--surface-gray-2)] rounded-md transition-colors duration-200 cursor-pointer">
+            {{ render_icon("chevron-left", "mr-2 transition-transform duration-200") }}
+            <span>Collapse</span>
         </button>
     </div>
 </div>
 
 <!-- Collapse/Expand Toggle Button (visible when sidebar is collapsed) -->
-<div x-show="$store.sidebar.isCollapsed" 
+<div x-show="$store.sidebar.isCollapsed"
      x-data
      class="fixed left-2 bottom-4 z-50 transition-opacity duration-300">
-    <button @click="$store.sidebar.toggle()" 
-            class="flex items-center justify-center w-10 h-10 bg-white border border-gray-200 rounded-md shadow-md hover:shadow-lg hover:bg-gray-50 transition-all duration-200">
-        <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-        </svg>
-    </button>
+    {{ icon_button(icon="chevron-right", click="$store.sidebar.toggle()") }}
 </div>
 
 <script>
-    // Initialize Alpine.js store for sidebar state
+    // Initialize Alpine.js stores
     document.addEventListener('alpine:init', () => {
+        // Get initial theme from localStorage or system preference
+        const stored = localStorage.getItem('wiki-theme');
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const initialIsDark = stored ? stored === 'dark' : prefersDark;
+
+        // Theme store for dark/light mode
+        Alpine.store('theme', {
+            isDark: initialIsDark,
+            toggle() {
+                this.isDark = !this.isDark;
+                const newTheme = this.isDark ? 'dark' : 'light';
+                document.documentElement.setAttribute('data-theme', newTheme);
+                localStorage.setItem('wiki-theme', newTheme);
+            }
+        });
+
+        // Sidebar store for collapse state
         Alpine.store('sidebar', {
             isCollapsed: Alpine.$persist(false),
             toggle() {
