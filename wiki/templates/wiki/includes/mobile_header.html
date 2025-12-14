@@ -1,0 +1,232 @@
+{% from "templates/wiki/macros/buttons.html" import render_icon %}
+{% from "templates/wiki/macros/sidebar_tree.html" import render_wiki_tree %}
+
+<!-- Mobile Navigation Container - Only visible on smaller screens -->
+<div class="xl:hidden" x-data="mobileNav()">
+    <!-- Mobile Header -->
+    <header class="sticky top-0 z-30 bg-[var(--surface-white)] border-b border-[var(--outline-gray-1)]">
+        <div class="flex items-center justify-between px-4 py-3">
+            <!-- Left: Logo and Menu Toggle -->
+            <div class="flex items-center gap-3">
+                <button @click="toggleSidebar()"
+                        class="p-2 -ml-2 text-[var(--ink-gray-5)] hover:text-[var(--ink-gray-9)] hover:bg-[var(--surface-gray-2)] rounded-md transition-colors duration-200">
+                    <template x-if="!sidebarOpen">
+                        {{ render_icon("menu") }}
+                    </template>
+                    <template x-if="sidebarOpen">
+                        {{ render_icon("x") }}
+                    </template>
+                </button>
+                <div class="flex items-center gap-2">
+                    {% if wiki_space.light_mode_logo %}
+                    <img class="size-6" src="{{ wiki_space.light_mode_logo }}"/>
+                    {% endif %}
+                    <span class="font-semibold text-[var(--ink-gray-9)]">{{ wiki_space.space_name or _("Wiki") }}</span>
+                </div>
+            </div>
+
+            <!-- Right: Theme Toggle -->
+            <div class="flex items-center gap-2">
+                <button @click="$store.theme.toggle()"
+                        class="p-2 text-[var(--ink-gray-5)] hover:text-[var(--ink-gray-9)] hover:bg-[var(--surface-gray-2)] rounded-md transition-colors duration-200">
+                    <template x-if="$store.theme.isDark">
+                        {{ render_icon("sun") }}
+                    </template>
+                    <template x-if="!$store.theme.isDark">
+                        {{ render_icon("moon") }}
+                    </template>
+                </button>
+            </div>
+        </div>
+
+        <!-- Mobile TOC Dropdown -->
+        <div class="border-t border-[var(--outline-gray-1)]" x-show="hasToc" x-cloak>
+            <button @click="tocOpen = !tocOpen"
+                    class="w-full flex items-center justify-between px-4 py-2.5 text-sm text-[var(--ink-gray-7)] hover:bg-[var(--surface-gray-2)] transition-colors duration-200">
+                <div class="flex items-center gap-2">
+                    {{ render_icon("list") }}
+                    <span>On this page</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="text-[var(--ink-gray-5)] truncate max-w-32" x-text="activeTocText"></span>
+                    <svg class="w-4 h-4 transition-transform duration-200 shrink-0" :class="tocOpen ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                    </svg>
+                </div>
+            </button>
+
+            <!-- TOC Dropdown Content -->
+            <div x-show="tocOpen"
+                 x-collapse
+                 class="border-t border-[var(--outline-gray-1)] bg-[var(--surface-gray-1)]">
+                <nav class="py-2 max-h-64 overflow-y-auto">
+                    <template x-for="heading in tocHeadings" :key="heading.id">
+                        <a :href="'#' + heading.id"
+                           @click.prevent="scrollToHeading(heading.id); tocOpen = false"
+                           :class="activeTocId === heading.id
+                               ? 'text-[var(--ink-gray-9)] font-medium bg-[var(--surface-gray-2)]'
+                               : 'text-[var(--ink-gray-5)] hover:text-[var(--ink-gray-9)] hover:bg-[var(--surface-gray-2)]'"
+                           :style="`padding-left: ${1 + (heading.level - 2) * 0.75}rem`"
+                           class="flex items-center gap-2 px-4 py-2 text-sm transition-colors duration-200">
+                           <svg class="w-3 h-3 shrink-0" :class="activeTocId === heading.id ? 'text-[var(--ink-gray-7)]' : 'text-[var(--ink-gray-4)]'" fill="currentColor" viewBox="0 0 8 8">
+                               <circle cx="4" cy="4" r="3"/>
+                           </svg>
+                           <span x-text="heading.text"></span>
+                        </a>
+                    </template>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <!-- Mobile Sidebar Overlay -->
+    <div x-show="sidebarOpen"
+         x-transition:enter="transition-opacity duration-300"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition-opacity duration-300"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         @click="closeSidebar()"
+         class="fixed inset-0 bg-black/50 z-40"
+         x-cloak>
+    </div>
+
+    <!-- Mobile Sidebar Panel -->
+    <div x-show="sidebarOpen"
+         x-transition:enter="transition-transform duration-300"
+         x-transition:enter-start="-translate-x-full"
+         x-transition:enter-end="translate-x-0"
+         x-transition:leave="transition-transform duration-300"
+         x-transition:leave-start="translate-x-0"
+         x-transition:leave-end="-translate-x-full"
+         class="fixed left-0 top-0 bottom-0 w-80 max-w-[85vw] bg-[var(--surface-gray-1)] z-50 flex flex-col"
+         x-cloak>
+
+        <!-- Sidebar Header -->
+        <div class="p-4 border-b border-[var(--outline-gray-1)] bg-[var(--surface-white)] flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                {% if wiki_space.light_mode_logo %}
+                <img class="size-8" src="{{ wiki_space.light_mode_logo }}"/>
+                {% endif %}
+                <h3 class="text-lg font-semibold text-[var(--ink-gray-9)]">{{ wiki_space.space_name or _("Wiki") }}</h3>
+            </div>
+            <button @click="closeSidebar()"
+                    class="p-2 text-[var(--ink-gray-5)] hover:text-[var(--ink-gray-9)] hover:bg-[var(--surface-gray-2)] rounded-md transition-colors duration-200">
+                {{ render_icon("x") }}
+            </button>
+        </div>
+
+        <!-- Sidebar Navigation -->
+        <nav class="py-2 flex-1 overflow-y-auto" @click="handleNavClick($event)">
+            {{ render_wiki_tree(nested_tree, current_route=doc.route if doc else '') }}
+        </nav>
+    </div>
+</div>
+
+<script>
+    function mobileNav() {
+        return {
+            sidebarOpen: false,
+            tocOpen: false,
+            tocHeadings: [],
+            activeTocId: '',
+            activeTocText: '',
+            hasToc: false,
+
+            // Sidebar tree expanded states (same as wikiSidebar)
+            expandedStates: Alpine.$persist({}).as('wiki-mobile-expanded'),
+            currentRoute: '{{ doc.route if doc else "" }}',
+
+            init() {
+                // Auto-expand parents of current page
+                this.expandCurrentPageParents();
+
+                // Listen for TOC updates from the main document component
+                this.$watch('$root.headings', (headings) => {
+                    if (headings && headings.length > 0) {
+                        this.tocHeadings = headings;
+                        this.hasToc = true;
+                    }
+                });
+
+                this.$watch('$root.activeId', (activeId) => {
+                    this.activeTocId = activeId;
+                    const heading = this.tocHeadings.find(h => h.id === activeId);
+                    this.activeTocText = heading ? heading.text : '';
+                });
+
+                // Initialize from root if available
+                this.$nextTick(() => {
+                    if (this.$root.headings && this.$root.headings.length > 0) {
+                        this.tocHeadings = this.$root.headings;
+                        this.hasToc = true;
+                        this.activeTocId = this.$root.activeId || '';
+                        const heading = this.tocHeadings.find(h => h.id === this.activeTocId);
+                        this.activeTocText = heading ? heading.text : '';
+                    }
+                });
+            },
+
+            toggleSidebar() {
+                this.sidebarOpen = !this.sidebarOpen;
+                document.body.style.overflow = this.sidebarOpen ? 'hidden' : '';
+            },
+
+            closeSidebar() {
+                this.sidebarOpen = false;
+                document.body.style.overflow = '';
+            },
+
+            scrollToHeading(id) {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    history.pushState(null, null, `#${id}`);
+                }
+            },
+
+            handleNavClick(event) {
+                const link = event.target.closest('a');
+                if (link) {
+                    this.closeSidebar();
+                }
+            },
+
+            // Sidebar tree methods (same as wikiSidebar)
+            toggleNode(nodeId) {
+                this.expandedStates[nodeId] = !this.expandedStates[nodeId];
+            },
+
+            isExpanded(nodeId) {
+                return this.expandedStates[nodeId] || false;
+            },
+
+            expandCurrentPageParents() {
+                if (!this.currentRoute) return;
+
+                this.$nextTick(() => {
+                    const currentPageElement = document.querySelector(`[data-route="${this.currentRoute}"]`);
+                    if (!currentPageElement) return;
+
+                    let parentElement = currentPageElement.parentElement;
+                    while (parentElement) {
+                        if (parentElement.classList.contains('wiki-children')) {
+                            const parentItem = parentElement.parentElement;
+                            if (parentItem) {
+                                const parentContent = parentItem.querySelector('.wiki-item-content[data-node-id]');
+                                if (parentContent) {
+                                    const nodeId = parentContent.getAttribute('data-node-id');
+                                    if (nodeId) {
+                                        this.expandedStates[nodeId] = true;
+                                    }
+                                }
+                            }
+                        }
+                        parentElement = parentElement.parentElement;
+                    }
+                });
+            }
+        }
+    }
+</script>

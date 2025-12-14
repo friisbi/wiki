@@ -1,9 +1,9 @@
 {% from "templates/wiki/macros/sidebar_tree.html" import render_wiki_tree %}
 {% from "templates/wiki/macros/buttons.html" import ghost_button_full, icon_button, render_icon %}
 
-<div class="wiki-sidebar bg-[var(--surface-gray-1)] border-r border-[var(--outline-gray-1)] fixed left-0 top-0 h-screen flex flex-col transition-all duration-300 overflow-hidden z-40"
+<div class="wiki-sidebar hidden xl:flex bg-[var(--surface-gray-1)] border-r border-[var(--outline-gray-1)] fixed left-0 top-0 h-screen flex-col transition-all duration-300 overflow-hidden z-40"
      x-data="wikiSidebar()"
-     :class="isCollapsed ? 'w-0 border-r-0' : 'w-72'"
+     :class="isCollapsed ? 'xl:w-0 xl:border-r-0' : 'xl:w-72'"
      x-cloak
      x-show="!isCollapsed"
      x-transition:enter="transition-all duration-300"
@@ -51,10 +51,10 @@
     </div>
 </div>
 
-<!-- Collapse/Expand Toggle Button (visible when sidebar is collapsed) -->
+<!-- Collapse/Expand Toggle Button (visible when sidebar is collapsed, only on xl screens) -->
 <div x-show="$store.sidebar.isCollapsed"
      x-data
-     class="fixed left-2 bottom-4 z-50 transition-opacity duration-300">
+     class="hidden xl:block fixed left-2 bottom-4 z-50 transition-opacity duration-300">
     {{ icon_button(icon="chevron-right", click="$store.sidebar.toggle()") }}
 </div>
 
