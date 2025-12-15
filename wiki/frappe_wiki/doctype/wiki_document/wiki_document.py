@@ -156,10 +156,23 @@ class WikiDocument(NestedSet):
 
 class WikiDocumentRenderer(BaseRenderer):
 	def can_render(self) -> bool:
-		document_name = frappe.db.get_value("Wiki Document", {"route": self.path, "is_published": 1}, "name")
-		if document_name:
-			self.wiki_doc_name = document_name
+		document = frappe.db.get_value(
+			"Wiki Document", {"route": self.path}, ["name", "is_group", "is_published"], as_dict=True
+		)
+		if document and not document.is_group and document.is_published:
+			self.wiki_doc_name = document.name
 			return True
+
+		if document and document.is_group:
+			# Redirect to first published child document if available
+			child_docs = get_descendants_of(
+				"Wiki Document", document.name, order_by="lft asc, sort_order desc"
+			)
+			for child_name in child_docs:
+				child_doc = frappe.get_cached_doc("Wiki Document", child_name)
+				if not child_doc.is_group and child_doc.is_published:
+					self.wiki_doc_name = child_doc.name
+					frappe.redirect(child_doc.route)
 
 		return False
 
