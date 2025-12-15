@@ -12,7 +12,7 @@ def after_install():
 	space.route = "wiki"
 	space.insert()
 
-	page = frappe.new_doc("Wiki Document Page")
+	page = frappe.new_doc("Wiki Document")
 	page.parent_wiki_document = space.root_group
 	page.title = "Welcome to Frappe Wiki"
 	page.content = "# Welcome to Frappe Wiki!"
