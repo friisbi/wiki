@@ -23,9 +23,18 @@
                         @click="showSettingsDialog = true"
                     />
                 </div>
-                <h1 class="text-lg font-semibold text-ink-gray-9">
-                    {{ space.doc?.space_name || spaceId }}
-                </h1>
+                <div class="flex items-center gap-2">
+                    <h1 class="text-lg font-semibold text-ink-gray-9">
+                        {{ space.doc?.space_name || spaceId }}
+                    </h1>
+                    <Button
+                        v-if="space.doc?.route"
+                        variant="ghost"
+                        icon="external-link"
+                        :title="__('View Space')"
+                        :link="space.doc?.route"
+                    />
+                </div>
                 <p class="text-sm text-ink-gray-5 mt-0.5">{{ space.doc?.route }}</p>
             </div>
 
