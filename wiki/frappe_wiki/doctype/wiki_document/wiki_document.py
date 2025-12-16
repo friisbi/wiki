@@ -5,6 +5,8 @@ import frappe
 from frappe.utils.nestedset import NestedSet, get_descendants_of
 from frappe.website.page_renderers.base_renderer import BaseRenderer
 
+from wiki.wiki.markdown import render_markdown
+
 
 class WikiDocument(NestedSet):
 	# begin: auto-generated types
@@ -194,7 +196,7 @@ class WikiDocumentRenderer(BaseRenderer):
 		# Get adjacent documents for prev/next navigation
 		adjacent_docs = get_adjacent_documents(nested_tree, doc.route)
 
-		content_html = frappe.utils.md_to_html(doc.content)
+		content_html = render_markdown(doc.content)
 		html = frappe.render_template(
 			"templates/wiki/document.html",
 			{
@@ -290,7 +292,7 @@ def get_page_data(route: str) -> dict:
 	return {
 		"title": doc.title,
 		"route": doc.route,
-		"content_html": frappe.utils.md_to_html(doc.content),
+		"content_html": render_markdown(doc.content),
 		"raw_markdown": doc.content or "",
 		"prev_doc": adjacent_docs["prev"],
 		"next_doc": adjacent_docs["next"],

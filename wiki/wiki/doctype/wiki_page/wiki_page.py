@@ -23,6 +23,7 @@ from frappe.website.website_generator import WebsiteGenerator
 
 from wiki.wiki.doctype.wiki_page.search import build_index_in_background, drop_index
 from wiki.wiki.doctype.wiki_settings.wiki_settings import get_all_spaces
+from wiki.wiki.markdown import render_markdown
 
 
 class WikiPage(WebsiteGenerator):
@@ -105,7 +106,7 @@ class WikiPage(WebsiteGenerator):
 			acceptable_elements
 			+ svg_elements
 			+ mathml_elements
-			+ ["html", "head", "meta", "link", "body", "style", "o:p", "iframe"]
+			+ ["html", "head", "meta", "link", "body", "style", "o:p", "iframe", "aside"]
 		)
 
 		def attributes_filter(tag, name, value):
@@ -291,7 +292,7 @@ class WikiPage(WebsiteGenerator):
 		context.hide_on_sidebar = frappe.get_value(
 			"Wiki Group Item", {"wiki_page": self.name}, "hide_on_sidebar"
 		)
-		html = frappe.utils.md_to_html(self.content)
+		html = render_markdown(self.content)
 		context.content = self.content
 		context.page_toc_html = (
 			self.calculate_toc_html(html) if wiki_settings.enable_table_of_contents else None
@@ -509,7 +510,7 @@ def extract_images_from_html(content):
 
 @frappe.whitelist()
 def convert_markdown(markdown):
-	html = frappe.utils.md_to_html(markdown)
+	html = render_markdown(markdown)
 	return html
 
 
@@ -701,7 +702,7 @@ def get_page_content(wiki_page_name: str):
 	if not all([content, page_title, next_page, prev_page]):
 		md_content = wiki_page.content
 
-		content = frappe.utils.md_to_html(md_content)
+		content = render_markdown(md_content)
 		toc_html = wiki_page.calculate_toc_html(content) if wiki_settings.enable_table_of_contents else None
 		page_title = wiki_page.title
 
