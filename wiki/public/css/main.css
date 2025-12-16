@@ -27,3 +27,17 @@
   --tw-prose-td-borders: var(--outline-gray-1);
 }
 
+/* Code block styling - remove default prose padding */
+.prose pre {
+  padding: 0;
+  margin: 1.5rem 0;
+  background: transparent;
+}
+
+.prose pre code {
+  display: block;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  overflow-x: auto;
+}
+
