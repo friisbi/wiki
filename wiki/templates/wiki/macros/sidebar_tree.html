@@ -2,14 +2,12 @@
     {% if nodes %}
         <ul class="wiki-tree">
             {% for node in nodes %}
-                {% set is_current = (not node.is_group and node.route == current_route) %}
-                <li class="wiki-item {{ 'is-group' if node.is_group else 'is-page' }} {{ 'current-page' if is_current else '' }}">
-                    <div class="wiki-item-content flex items-center py-2 transition-colors duration-200 {{ 'pl-8' if level == 1 else 'pl-10' if level == 2 else 'pl-12' if level >= 3 else 'pl-4' }} pr-4 {{ 'border-l-2 border-[var(--ink-gray-4)] bg-[var(--surface-gray-2)] text-[var(--ink-gray-9)]' if is_current else 'hover:bg-[var(--surface-gray-2)] cursor-pointer' }}"
+                <li class="wiki-item {{ 'is-group' if node.is_group else 'is-page' }}">
+                    <div class="wiki-item-content flex items-center py-2 transition-colors duration-200 {{ 'pl-8' if level == 1 else 'pl-10' if level == 2 else 'pl-12' if level >= 3 else 'pl-4' }} pr-4"
+                         :class="$store.navigation.currentRoute === '{{ node.route }}' && !{{ 'true' if node.is_group else 'false' }} ? 'border-l-2 border-[var(--ink-gray-4)] bg-[var(--surface-gray-2)] text-[var(--ink-gray-9)]' : 'hover:bg-[var(--surface-gray-2)] cursor-pointer'"
                          {% if node.is_group %}@click="toggleNode('{{ node.name }}')"{% endif %}
                          data-route="{{ node.route }}"
-                         data-node-id="{{ node.name }}"
-                         data-is-current="{{ 'true' if is_current else 'false' }}"
-                         data-current-route="{{ current_route }}">
+                         data-node-id="{{ node.name }}">
 
                         {% if node.is_group %}
                             <div class="wiki-link flex items-center justify-between text-[var(--ink-gray-7)] no-underline flex-1 transition-colors duration-200">
@@ -21,8 +19,13 @@
                                 </svg>
                             </div>
                         {% else %}
-                            <a href="/{{ node.route }}" class="wiki-link flex items-center no-underline flex-1 transition-colors duration-200 {{ 'text-[var(--ink-gray-9)] font-medium' if is_current else 'text-[var(--ink-gray-6)] hover:text-[var(--ink-gray-9)]' }}">
-                                <span class="wiki-title text-sm {{ 'font-medium' if is_current else 'font-normal' }}">{{ node.title }}</span>
+                            <a href="/{{ node.route }}"
+                               @click.prevent="$store.navigation.navigateTo('{{ node.route }}')"
+                               @mouseenter="$store.navigation.prefetch('{{ node.route }}')"
+                               class="wiki-link flex items-center no-underline flex-1 transition-colors duration-200"
+                               :class="$store.navigation.currentRoute === '{{ node.route }}' ? 'text-[var(--ink-gray-9)] font-medium' : 'text-[var(--ink-gray-6)] hover:text-[var(--ink-gray-9)]'">
+                                <span class="wiki-title text-sm"
+                                      :class="$store.navigation.currentRoute === '{{ node.route }}' ? 'font-medium' : 'font-normal'">{{ node.title }}</span>
                             </a>
                         {% endif %}
                     </div>

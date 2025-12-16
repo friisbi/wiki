@@ -11,13 +11,15 @@
    - x_text: Alpine.js x-text for dynamic text (optional)
    - extra_classes: Additional CSS classes (optional)
    - icon_classes: Additional classes for the icon (optional)
+   - id: HTML id attribute (optional)
 #}
 
-{% macro ghost_button(text="", icon="", href="", click="", x_show="", x_text="", extra_classes="", icon_classes="") %}
+{% macro ghost_button(text="", icon="", href="", click="", x_show="", x_text="", extra_classes="", icon_classes="", id="") %}
     {% set base_classes = "inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-[var(--ink-gray-5)] hover:text-[var(--ink-gray-9)] hover:bg-[var(--surface-gray-2)] rounded-md transition-colors duration-200 cursor-pointer" %}
 
     {% if href %}
     <a href="{{ href }}"
+       {% if id %}id="{{ id }}"{% endif %}
        class="{{ base_classes }} {{ extra_classes }}"
        {% if x_show %}x-show="{{ x_show }}"{% endif %}>
         {{ render_icon(icon, icon_classes) }}
@@ -29,6 +31,7 @@
     </a>
     {% else %}
     <button {% if click %}@click="{{ click }}"{% endif %}
+            {% if id %}id="{{ id }}"{% endif %}
             class="{{ base_classes }} {{ extra_classes }}"
             {% if x_show %}x-show="{{ x_show }}"{% endif %}>
         {{ render_icon(icon, icon_classes) }}

@@ -88,6 +88,160 @@
                 this.isCollapsed = !this.isCollapsed;
             }
         });
+
+        // Navigation store for client-side page transitions
+        Alpine.store('navigation', {
+            loading: false,
+            currentRoute: '{{ doc.route if doc else "" }}',
+            prefetchCache: {},
+
+            init() {
+                // Handle browser back/forward
+                window.addEventListener('popstate', (event) => {
+                    if (event.state?.route) {
+                        this.navigateTo(event.state.route, false);
+                    }
+                });
+                // Set initial state
+                history.replaceState({ route: this.currentRoute }, '', window.location.pathname);
+            },
+
+            async prefetch(route) {
+                if (route === this.currentRoute || this.prefetchCache[route]) return;
+
+                try {
+                    const response = await fetch('/api/method/wiki.frappe_wiki.doctype.wiki_document.wiki_document.get_page_data', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ route })
+                    });
+                    const data = await response.json();
+                    if (data.message) {
+                        this.prefetchCache[route] = data.message;
+                    }
+                } catch (e) {
+                    // Silently fail - prefetch is just an optimization
+                }
+            },
+
+            async navigateTo(route, pushState = true) {
+                if (route === this.currentRoute) return;
+
+                // Check prefetch cache first
+                if (this.prefetchCache[route]) {
+                    this.updateContent(this.prefetchCache[route]);
+                    this.currentRoute = route;
+                    if (pushState) {
+                        history.pushState({ route }, '', '/' + route);
+                    }
+                    return;
+                }
+
+                this.loading = true;
+
+                try {
+                    const response = await fetch('/api/method/wiki.frappe_wiki.doctype.wiki_document.wiki_document.get_page_data', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ route })
+                    });
+                    const data = await response.json();
+
+                    if (data.message) {
+                        this.updateContent(data.message);
+                        this.currentRoute = route;
+                        if (pushState) {
+                            history.pushState({ route }, '', '/' + route);
+                        }
+                    } else {
+                        throw new Error('Invalid response');
+                    }
+                } catch (error) {
+                    // Fallback to full page load
+                    window.location.href = '/' + route;
+                } finally {
+                    this.loading = false;
+                }
+            },
+
+            updateContent(data) {
+                // Update page title
+                document.title = data.title;
+                const titleEl = document.getElementById('wiki-page-title');
+                if (titleEl) titleEl.textContent = data.title;
+
+                // Update content
+                const contentEl = document.getElementById('wiki-content');
+                if (contentEl) contentEl.innerHTML = data.content_html;
+
+                // Update prev/next navigation
+                this.updateNavButtons(data.prev_doc, data.next_doc);
+
+                // Update raw markdown for wikiDocument() component
+                window.wikiPageMarkdown = data.raw_markdown;
+
+                // Update edit link
+                const editLink = document.getElementById('wiki-edit-link');
+                if (editLink) editLink.setAttribute('href', data.edit_link);
+
+                // Reinitialize TOC
+                if (Alpine.store('toc')) {
+                    Alpine.store('toc').refresh();
+                }
+
+                // Scroll to top
+                window.scrollTo(0, 0);
+            },
+
+            updateNavButtons(prevDoc, nextDoc) {
+                const navContainer = document.getElementById('wiki-nav-buttons');
+                if (!navContainer) return;
+
+                let html = '';
+
+                if (prevDoc || nextDoc) {
+                    const justifyClass = prevDoc && nextDoc ? 'justify-between' : (prevDoc ? 'justify-start' : 'justify-end');
+                    html = `<div class="flex items-stretch gap-4 ${justifyClass}">`;
+
+                    if (prevDoc) {
+                        html += `
+                            <a href="/${prevDoc.route}"
+                               @click.prevent="$store.navigation.navigateTo('${prevDoc.route}')"
+                               @mouseenter="$store.navigation.prefetch('${prevDoc.route}')"
+                               class="group flex-1 flex items-center gap-3 p-4 rounded-lg border border-[var(--outline-gray-1)] hover:border-[var(--outline-gray-2)] hover:bg-[var(--surface-gray-1)] transition-all duration-200 no-underline max-w-[50%]">
+                                <svg class="w-5 h-5 text-[var(--ink-gray-4)] group-hover:text-[var(--ink-gray-6)] transition-colors shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                                </svg>
+                                <div class="flex flex-col min-w-0">
+                                    <span class="text-xs font-medium text-[var(--ink-gray-4)] uppercase tracking-wide">Previous</span>
+                                    <span class="text-sm font-medium text-[var(--ink-gray-7)] group-hover:text-[var(--ink-gray-9)] transition-colors truncate">${prevDoc.title}</span>
+                                </div>
+                            </a>`;
+                    }
+
+                    if (nextDoc) {
+                        const mlClass = !prevDoc ? 'ml-auto' : '';
+                        html += `
+                            <a href="/${nextDoc.route}"
+                               @click.prevent="$store.navigation.navigateTo('${nextDoc.route}')"
+                               @mouseenter="$store.navigation.prefetch('${nextDoc.route}')"
+                               class="group flex-1 flex items-center justify-end gap-3 p-4 rounded-lg border border-[var(--outline-gray-1)] hover:border-[var(--outline-gray-2)] hover:bg-[var(--surface-gray-1)] transition-all duration-200 no-underline max-w-[50%] ${mlClass}">
+                                <div class="flex flex-col items-end min-w-0">
+                                    <span class="text-xs font-medium text-[var(--ink-gray-4)] uppercase tracking-wide">Next</span>
+                                    <span class="text-sm font-medium text-[var(--ink-gray-7)] group-hover:text-[var(--ink-gray-9)] transition-colors truncate">${nextDoc.title}</span>
+                                </div>
+                                <svg class="w-5 h-5 text-[var(--ink-gray-4)] group-hover:text-[var(--ink-gray-6)] transition-colors shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                                </svg>
+                            </a>`;
+                    }
+
+                    html += '</div>';
+                }
+
+                navContainer.innerHTML = html;
+            }
+        });
     });
 
     function wikiSidebar() {

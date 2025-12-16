@@ -6,12 +6,13 @@
 {% endblock %}
 
 {% block body %}
-<div x-data="{ ...wikiDocument(), ...tocScrollSpy() }">
+<div x-data="{ ...wikiDocument(), ...tocScrollSpy() }" x-init="$store.navigation.init()">
     <!-- Main Content -->
-    <article class="max-w-4xl mx-auto xl:mr-72">
+    <article class="max-w-4xl mx-auto xl:mr-72 transition-opacity duration-150"
+             :class="{ 'opacity-50': $store.navigation.loading }">
         <!-- Page Header -->
         <header class="mb-8 pb-4 border-b border-[var(--outline-gray-1)]">
-            <h1 class="text-3xl font-bold text-[var(--ink-gray-9)] mb-4">{{ doc.title }}</h1>
+            <h1 id="wiki-page-title" class="text-3xl font-bold text-[var(--ink-gray-9)] mb-4">{{ doc.title }}</h1>
 
             <!-- Action Buttons -->
             <div class="flex items-center gap-3">
@@ -41,7 +42,7 @@
                 {{ dropdown_end() }}
 
                 <!-- Edit Page Link -->
-                {{ ghost_button(text="Edit Page", icon="edit", href=doc.get_edit_link()) }}
+                {{ ghost_button(text="Edit Page", icon="edit", href=doc.get_edit_link(), id="wiki-edit-link") }}
             </div>
         </header>
 
@@ -51,11 +52,13 @@
         </div>
 
         <!-- Previous/Next Navigation -->
-        {% if prev_doc or next_doc %}
-        <nav class="mt-12 pt-8 border-t border-[var(--outline-gray-1)]">
+        <nav id="wiki-nav-buttons" class="mt-12 pt-8 border-t border-[var(--outline-gray-1)]">
+            {% if prev_doc or next_doc %}
             <div class="flex items-stretch gap-4 {{ 'justify-between' if prev_doc and next_doc else ('justify-start' if prev_doc else 'justify-end') }}">
                 {% if prev_doc %}
                 <a href="/{{ prev_doc.route }}"
+                   @click.prevent="$store.navigation.navigateTo('{{ prev_doc.route }}')"
+                   @mouseenter="$store.navigation.prefetch('{{ prev_doc.route }}')"
                    class="group flex-1 flex items-center gap-3 p-4 rounded-lg border border-[var(--outline-gray-1)] hover:border-[var(--outline-gray-2)] hover:bg-[var(--surface-gray-1)] transition-all duration-200 no-underline max-w-[50%]">
                     {{ render_icon("chevron-left", "w-5 h-5 text-[var(--ink-gray-4)] group-hover:text-[var(--ink-gray-6)] transition-colors shrink-0") }}
                     <div class="flex flex-col min-w-0">
@@ -67,6 +70,8 @@
 
                 {% if next_doc %}
                 <a href="/{{ next_doc.route }}"
+                   @click.prevent="$store.navigation.navigateTo('{{ next_doc.route }}')"
+                   @mouseenter="$store.navigation.prefetch('{{ next_doc.route }}')"
                    class="group flex-1 flex items-center justify-end gap-3 p-4 rounded-lg border border-[var(--outline-gray-1)] hover:border-[var(--outline-gray-2)] hover:bg-[var(--surface-gray-1)] transition-all duration-200 no-underline max-w-[50%] {{ 'ml-auto' if not prev_doc else '' }}">
                     <div class="flex flex-col items-end min-w-0">
                         <span class="text-xs font-medium text-[var(--ink-gray-4)] uppercase tracking-wide">Next</span>
@@ -76,18 +81,24 @@
                 </a>
                 {% endif %}
             </div>
+            {% endif %}
         </nav>
-        {% endif %}
     </article>
 
     {% include "templates/wiki/includes/toc.html" %}
 </div>
 
 <script>
+    // Store initial markdown globally for dynamic updates
+    window.wikiPageMarkdown = {{ raw_markdown | tojson }};
+
     function wikiDocument() {
         return {
             copied: false,
-            markdown: {{ raw_markdown | tojson }},
+
+            get markdown() {
+                return window.wikiPageMarkdown || '';
+            },
 
             copyMarkdown() {
                 navigator.clipboard.writeText(this.markdown).then(() => {

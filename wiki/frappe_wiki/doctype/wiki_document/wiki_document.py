@@ -273,17 +273,42 @@ def get_breadcrumbs(name: str) -> dict:
 	return doc.get_breadcrumbs()
 
 
+# TODO: DRY!
+@frappe.whitelist(allow_guest=True)
+def get_page_data(route: str) -> dict:
+	"""Returns all data needed to render a page dynamically for client-side navigation."""
+	doc_name = frappe.db.get_value("Wiki Document", {"route": route, "is_published": 1}, "name")
+	if not doc_name:
+		frappe.throw("Page not found", frappe.DoesNotExistError)
+
+	doc = frappe.get_cached_doc("Wiki Document", doc_name)
+	wiki_space_root = doc.get_ancestors()[-1]
+	descendants = get_descendants_of("Wiki Document", wiki_space_root)
+	nested_tree = build_nested_wiki_tree(descendants)
+	adjacent_docs = get_adjacent_documents(nested_tree, doc.route)
+
+	return {
+		"title": doc.title,
+		"route": doc.route,
+		"content_html": frappe.utils.md_to_html(doc.content),
+		"raw_markdown": doc.content or "",
+		"prev_doc": adjacent_docs["prev"],
+		"next_doc": adjacent_docs["next"],
+		"edit_link": doc.get_edit_link(),
+	}
+
+
 def get_adjacent_documents(nested_tree: list, current_route: str) -> dict:
 	"""
 	Get the previous and next documents based on the flattened tree order.
 	Only returns non-group documents (actual pages).
 
 	Args:
-		nested_tree: The nested tree structure from build_nested_wiki_tree
-		current_route: The route of the current document
+	        nested_tree: The nested tree structure from build_nested_wiki_tree
+	        current_route: The route of the current document
 
 	Returns:
-		dict with 'prev' and 'next' keys, each containing {title, route} or None
+	        dict with 'prev' and 'next' keys, each containing {title, route} or None
 	"""
 
 	def flatten_tree(nodes: list) -> list:

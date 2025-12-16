@@ -25,6 +25,23 @@
 </aside>
 
 <script>
+    // Initialize TOC store for external refresh capability
+    document.addEventListener('alpine:init', () => {
+        Alpine.store('toc', {
+            refreshCallback: null,
+
+            setRefreshCallback(callback) {
+                this.refreshCallback = callback;
+            },
+
+            refresh() {
+                if (this.refreshCallback) {
+                    this.refreshCallback();
+                }
+            }
+        });
+    });
+
     function tocScrollSpy(contentId = 'wiki-content') {
         return {
             headings: [],
@@ -32,6 +49,22 @@
             observer: null,
 
             init() {
+                this.extractHeadings(contentId);
+                this.setupScrollSpy();
+
+                // Register refresh callback with store
+                Alpine.store('toc').setRefreshCallback(() => {
+                    this.refresh();
+                });
+            },
+
+            refresh() {
+                // Disconnect existing observer
+                if (this.observer) {
+                    this.observer.disconnect();
+                }
+
+                // Re-extract headings and setup scroll spy
                 this.extractHeadings(contentId);
                 this.setupScrollSpy();
             },
@@ -56,6 +89,8 @@
                 // Set initial active heading
                 if (this.headings.length > 0) {
                     this.activeId = this.headings[0].id;
+                } else {
+                    this.activeId = '';
                 }
             },
 
