@@ -189,8 +189,10 @@
                     Alpine.store('toc').refresh();
                 }
 
-                // Re-apply syntax highlighting to code blocks
-                if (typeof hljs !== 'undefined') {
+                // Re-apply syntax highlighting and code block enhancements
+                if (typeof initCodeBlocks === 'function') {
+                    initCodeBlocks();
+                } else if (typeof hljs !== 'undefined') {
                     hljs.highlightAll();
                 }
 
