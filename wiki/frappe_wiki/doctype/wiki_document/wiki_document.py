@@ -174,7 +174,7 @@ class WikiDocumentRenderer(BaseRenderer):
 		if document and document.is_group:
 			# Redirect to first published child document if available
 			child_docs = get_descendants_of(
-				"Wiki Document", document.name, order_by="lft asc, sort_order desc"
+				"Wiki Document", document.name, order_by="lft asc, sort_order desc", ignore_permissions=True
 			)
 			for child_name in child_docs:
 				child_doc = frappe.get_cached_doc("Wiki Document", child_name)
@@ -191,7 +191,7 @@ class WikiDocumentRenderer(BaseRenderer):
 		wiki_space = frappe.get_cached_value("Wiki Space", {"root_group": wiki_space_root}, "name")
 		wiki_space = frappe.get_cached_doc("Wiki Space", wiki_space)
 
-		descendants = get_descendants_of("Wiki Document", wiki_space_root)
+		descendants = get_descendants_of("Wiki Document", wiki_space_root, ignore_permissions=True)
 		nested_tree = build_nested_wiki_tree(descendants)
 
 		# Get adjacent documents for prev/next navigation
@@ -286,7 +286,7 @@ def get_page_data(route: str) -> dict:
 
 	doc = frappe.get_cached_doc("Wiki Document", doc_name)
 	wiki_space_root = doc.get_ancestors()[-1]
-	descendants = get_descendants_of("Wiki Document", wiki_space_root)
+	descendants = get_descendants_of("Wiki Document", wiki_space_root, ignore_permissions=True)
 	nested_tree = build_nested_wiki_tree(descendants)
 	adjacent_docs = get_adjacent_documents(nested_tree, doc.route)
 
