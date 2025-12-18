@@ -282,7 +282,7 @@ def get_page_data(route: str) -> dict:
 	"""Returns all data needed to render a page dynamically for client-side navigation."""
 	doc_name = frappe.db.get_value("Wiki Document", {"route": route, "is_published": 1}, "name")
 	if not doc_name:
-		frappe.throw("Page not found", frappe.DoesNotExistError)
+		frappe.throw(frappe._("Page not found"), frappe.DoesNotExistError)
 
 	doc = frappe.get_cached_doc("Wiki Document", doc_name)
 	wiki_space_root = doc.get_ancestors()[-1]
