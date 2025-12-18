@@ -81,7 +81,6 @@ async function uploadImage(file) {
         // Return the file URL for the editor to use
         return result.file_url;
     } catch (error) {
-        console.error('Image upload failed:', error);
         toast.error('Failed to upload image');
         throw error;
     }
@@ -147,7 +146,6 @@ async function dragDropUploader(files, schema) {
             
             toast.success(`Uploaded: ${file.name}`);
         } catch (error) {
-            console.error('File upload failed:', error);
             toast.error(`Failed to upload: ${file.name}`);
         }
     }

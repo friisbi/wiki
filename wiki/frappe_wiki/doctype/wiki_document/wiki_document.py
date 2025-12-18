@@ -87,10 +87,44 @@ class WikiDocument(NestedSet):
 		if self.route and self.route.startswith("/"):
 			self.route = self.route[1 : len(self.route)]
 
+	def get_root_group(self) -> str | None:
+		"""Get the root group (Wiki Space root) for this document."""
+		ancestors = self.get_ancestors()
+		if ancestors:
+			return ancestors[-1]
+		return self.parent_wiki_document
+
+	def get_wiki_space(self) -> dict | None:
+		"""Get the Wiki Space this document belongs to."""
+		root_group = self.get_root_group()
+		if not root_group:
+			return None
+		return frappe.get_cached_value(
+			"Wiki Space", {"root_group": root_group}, ["name", "space_name", "route"], as_dict=True
+		)
+
 	def get_edit_link(self) -> str:
-		root_group = self.get_ancestors()[-1]
-		space_name = frappe.get_cached_value("Wiki Space", {"root_group": root_group}, "name")
-		return f"/frontend/spaces/{space_name}/page/{self.name}"
+		wiki_space = self.get_wiki_space()
+		if not wiki_space:
+			return ""
+		return f"/frontend/spaces/{wiki_space.name}/page/{self.name}"
+
+	def get_tree_and_navigation(self) -> tuple[list, dict]:
+		"""
+		Get the wiki tree and adjacent documents for navigation.
+
+		Returns:
+		        tuple of (nested_tree, adjacent_docs)
+		"""
+		root_group = self.get_root_group()
+		if not root_group:
+			return [], {"prev": None, "next": None}
+
+		descendants = get_descendants_of("Wiki Document", root_group, ignore_permissions=True)
+		nested_tree = build_nested_wiki_tree(descendants)
+		adjacent_docs = get_adjacent_documents(nested_tree, self.route)
+
+		return nested_tree, adjacent_docs
 
 	@frappe.whitelist()
 	def get_breadcrumbs(self) -> dict:
@@ -110,25 +144,14 @@ class WikiDocument(NestedSet):
 			)
 
 		# Get the space that owns this document tree
+		wiki_space = self.get_wiki_space()
 		space = None
-		root_group = None
-
-		if ancestors:
-			# ancestors are ordered from immediate parent to root, so last item is root
-			root_group = ancestors[-1]
-		elif self.parent_wiki_document:
-			# Document is direct child of root group, parent is the root
-			root_group = self.parent_wiki_document
-
-		if root_group:
-			space_name = frappe.get_cached_value("Wiki Space", {"root_group": root_group}, "name")
-			if space_name:
-				space_doc = frappe.get_cached_doc("Wiki Space", space_name)
-				space = {
-					"name": space_doc.name,
-					"space_name": space_doc.space_name,
-					"route": space_doc.route,
-				}
+		if wiki_space:
+			space = {
+				"name": wiki_space.name,
+				"space_name": wiki_space.space_name,
+				"route": wiki_space.route,
+			}
 
 		return {
 			"ancestors": breadcrumb_items,
@@ -187,22 +210,17 @@ class WikiDocumentRenderer(BaseRenderer):
 	def render(self):
 		doc = frappe.get_cached_doc("Wiki Document", self.wiki_doc_name)
 
-		wiki_space_root = doc.get_ancestors()[-1]
-		wiki_space = frappe.get_cached_value("Wiki Space", {"root_group": wiki_space_root}, "name")
-		wiki_space = frappe.get_cached_doc("Wiki Space", wiki_space)
+		wiki_space = doc.get_wiki_space()
+		wiki_space_doc = frappe.get_cached_doc("Wiki Space", wiki_space.name) if wiki_space else None
 
-		descendants = get_descendants_of("Wiki Document", wiki_space_root, ignore_permissions=True)
-		nested_tree = build_nested_wiki_tree(descendants)
-
-		# Get adjacent documents for prev/next navigation
-		adjacent_docs = get_adjacent_documents(nested_tree, doc.route)
+		nested_tree, adjacent_docs = doc.get_tree_and_navigation()
 
 		content_html = render_markdown(doc.content)
 		html = frappe.render_template(
 			"templates/wiki/document.html",
 			{
 				"doc": doc,
-				"wiki_space": wiki_space,
+				"wiki_space": wiki_space_doc,
 				"rendered_content": content_html,
 				"raw_markdown": doc.content or "",
 				"nested_tree": nested_tree,
@@ -276,7 +294,6 @@ def get_breadcrumbs(name: str) -> dict:
 	return doc.get_breadcrumbs()
 
 
-# TODO: DRY!
 @frappe.whitelist(allow_guest=True)
 def get_page_data(route: str) -> dict:
 	"""Returns all data needed to render a page dynamically for client-side navigation."""
@@ -285,10 +302,7 @@ def get_page_data(route: str) -> dict:
 		frappe.throw(frappe._("Page not found"), frappe.DoesNotExistError)
 
 	doc = frappe.get_cached_doc("Wiki Document", doc_name)
-	wiki_space_root = doc.get_ancestors()[-1]
-	descendants = get_descendants_of("Wiki Document", wiki_space_root, ignore_permissions=True)
-	nested_tree = build_nested_wiki_tree(descendants)
-	adjacent_docs = get_adjacent_documents(nested_tree, doc.route)
+	nested_tree, adjacent_docs = doc.get_tree_and_navigation()
 
 	return {
 		"title": doc.title,
