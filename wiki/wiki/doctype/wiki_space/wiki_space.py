@@ -18,6 +18,7 @@ class WikiSpace(Document):
 
 		app_switcher_logo: DF.AttachImage | None
 		dark_mode_logo: DF.AttachImage | None
+		enable_feedback_collection: DF.Check
 		favicon: DF.AttachImage | None
 		light_mode_logo: DF.AttachImage | None
 		navbar_items: DF.Table[TopBarItem]

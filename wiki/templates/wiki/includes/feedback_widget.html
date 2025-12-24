@@ -1,0 +1,163 @@
+<!-- Feedback Widget -->
+<form x-data="feedbackWidget('{{ doc.name }}')" @submit.prevent="submit()" class="mt-8 pt-6 border-t border-[var(--outline-gray-1)]">
+    <p class="text-sm font-medium text-[var(--ink-gray-7)] mb-3">Was this page helpful?</p>
+
+    <!-- Reaction Buttons (pill-shaped toggle group) -->
+    <fieldset class="inline-flex rounded-full bg-[var(--surface-gray-2)] p-1" role="radiogroup" aria-label="Feedback rating">
+        <!-- Good (Happy face) -->
+        <button type="button"
+                @click="feedbackType = 'Good'"
+                :class="feedbackType === 'Good' ? 'bg-[var(--surface-white)] shadow-sm' : 'hover:bg-[var(--surface-gray-3)]'"
+                class="p-2 rounded-full transition-all duration-200 cursor-pointer"
+                role="radio"
+                :aria-checked="feedbackType === 'Good'"
+                aria-label="Good">
+            <svg class="w-5 h-5" :class="feedbackType === 'Good' ? 'text-[var(--ink-gray-9)]' : 'text-[var(--ink-gray-5)]'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M8 14s1.5 2 4 2 4-2 4-2"/>
+                <line x1="9" y1="9" x2="9.01" y2="9"/>
+                <line x1="15" y1="9" x2="15.01" y2="9"/>
+            </svg>
+        </button>
+
+        <!-- Ok (Neutral face) -->
+        <button type="button"
+                @click="feedbackType = 'Ok'"
+                :class="feedbackType === 'Ok' ? 'bg-[var(--surface-white)] shadow-sm' : 'hover:bg-[var(--surface-gray-3)]'"
+                class="p-2 rounded-full transition-all duration-200 cursor-pointer"
+                role="radio"
+                :aria-checked="feedbackType === 'Ok'"
+                aria-label="Ok">
+            <svg class="w-5 h-5" :class="feedbackType === 'Ok' ? 'text-[var(--ink-gray-9)]' : 'text-[var(--ink-gray-5)]'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="8" y1="15" x2="16" y2="15"/>
+                <line x1="9" y1="9" x2="9.01" y2="9"/>
+                <line x1="15" y1="9" x2="15.01" y2="9"/>
+            </svg>
+        </button>
+
+        <!-- Bad (Sad face) -->
+        <button type="button"
+                @click="feedbackType = 'Bad'"
+                :class="feedbackType === 'Bad' ? 'bg-[var(--surface-white)] shadow-sm' : 'hover:bg-[var(--surface-gray-3)]'"
+                class="p-2 rounded-full transition-all duration-200 cursor-pointer"
+                role="radio"
+                :aria-checked="feedbackType === 'Bad'"
+                aria-label="Bad">
+            <svg class="w-5 h-5" :class="feedbackType === 'Bad' ? 'text-[var(--ink-gray-9)]' : 'text-[var(--ink-gray-5)]'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M16 16s-1.5-2-4-2-4 2-4 2"/>
+                <line x1="9" y1="9" x2="9.01" y2="9"/>
+                <line x1="15" y1="9" x2="15.01" y2="9"/>
+            </svg>
+        </button>
+    </fieldset>
+
+    <!-- Optional text + Submit (shown after type selected) -->
+    <template x-if="feedbackType">
+        <div class="mt-4" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 -translate-y-1" x-transition:enter-end="opacity-100 translate-y-0">
+            <div class="relative">
+                <textarea x-model="comment"
+                          name="feedback"
+                          :disabled="submitted"
+                          placeholder="Anything you'd like to add?"
+                          rows="3"
+                          class="w-full px-3 py-2 pr-24 text-sm rounded-lg border border-[var(--outline-gray-2)] bg-[var(--surface-white)] text-[var(--ink-gray-9)] placeholder-[var(--ink-gray-4)] focus:outline-none focus:ring-2 focus:ring-[var(--outline-gray-3)] resize-none disabled:opacity-60"></textarea>
+
+                <!-- Submit button OR Thank you message -->
+                <div class="absolute bottom-3 right-3">
+                    <template x-if="!submitted">
+                        <button type="submit"
+                                :disabled="submitting"
+                                class="px-3 py-1 text-sm font-medium rounded-md bg-[var(--surface-gray-3)] text-[var(--ink-gray-7)] hover:bg-[var(--surface-gray-4)] hover:text-[var(--ink-gray-9)] transition-colors duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
+                            <span x-show="!submitting">Submit</span>
+                            <span x-show="submitting" class="flex items-center gap-1">
+                                <svg class="animate-spin h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                            </span>
+                        </button>
+                    </template>
+                    <template x-if="submitted">
+                        <span class="flex items-center gap-1 text-sm font-medium text-green-600">
+                            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="10"/>
+                                <path d="M9 12l2 2 4-4"/>
+                            </svg>
+                            Thank you!
+                        </span>
+                    </template>
+                </div>
+            </div>
+        </div>
+    </template>
+</form>
+
+<script>
+    // Helper to get CSRF token from cookie
+    function getCsrfToken() {
+        const name = 'csrf_token=';
+        const decodedCookie = decodeURIComponent(document.cookie);
+        const cookies = decodedCookie.split(';');
+        for (let cookie of cookies) {
+            cookie = cookie.trim();
+            if (cookie.indexOf(name) === 0) {
+                return cookie.substring(name.length);
+            }
+        }
+        return null;
+    }
+
+    function feedbackWidget(docName) {
+        return {
+            docName: docName,
+            feedbackType: null,
+            comment: '',
+            submitting: false,
+            submitted: false,
+
+            async submit() {
+                if (!this.feedbackType || this.submitting || this.submitted) return;
+
+                this.submitting = true;
+
+                try {
+                    const csrfToken = getCsrfToken();
+                    const headers = {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    };
+
+                    if (csrfToken) {
+                        headers['X-Frappe-CSRF-Token'] = csrfToken;
+                    }
+
+                    const response = await fetch('/api/method/wiki.wiki.doctype.wiki_feedback.wiki_feedback.submit_feedback', {
+                        method: 'POST',
+                        headers: headers,
+                        body: JSON.stringify({
+                            wiki_document: this.docName,
+                            type: this.feedbackType,
+                            feedback: this.comment || null
+                        })
+                    });
+
+                    const data = await response.json();
+
+                    if (data.message && data.message.success) {
+                        this.submitted = true;
+                    } else if (data.exc_type === 'RateLimitExceededError') {
+                        alert('You have submitted too many feedbacks. Please try again later.');
+                    } else {
+                        console.error('Feedback submission failed:', data);
+                    }
+                } catch (error) {
+                    console.error('Error submitting feedback:', error);
+                } finally {
+                    this.submitting = false;
+                }
+            }
+        }
+    }
+</script>
