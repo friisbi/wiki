@@ -88,4 +88,4 @@ def submit_feedback(
 		).insert()
 		return
 
-	frappe.throw("Invalid feedback submission parameters")
+	frappe.throw(frappe._("Invalid feedback submission parameters"))
