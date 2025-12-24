@@ -5,7 +5,7 @@ from frappe.core.doctype.file.utils import get_content_hash
 
 
 def get_tailwindcss_hash():
-	tailwindcss_path = frappe.get_app_path("wiki", "wiki/css/tailwind.css")
+	tailwindcss_path = frappe.get_app_path("wiki", "public/css/tailwind.css")
 	content = open(tailwindcss_path).read()
 	return get_content_hash(content)
 
