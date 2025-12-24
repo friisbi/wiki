@@ -23,6 +23,9 @@
             const theme = stored || (prefersDark ? 'dark' : 'light');
             document.documentElement.setAttribute('data-theme', theme);
         })();
+
+        // CSRF token for API requests
+        window.CSRF_TOKEN = '{{ csrf_token }}';
     </script>
 
     <script src="/assets/wiki/js/vendor/alpinejs/plugins/persist.js"></script>

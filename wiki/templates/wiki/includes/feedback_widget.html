@@ -6,7 +6,7 @@
     <fieldset class="inline-flex rounded-full bg-[var(--surface-gray-2)] p-1" role="radiogroup" aria-label="Feedback rating">
         <!-- Good (Happy face) -->
         <button type="button"
-                @click="feedbackType = 'Good'"
+                @click="selectFeedback('Good')"
                 :disabled="submitted"
                 :class="feedbackType === 'Good' ? 'bg-[var(--surface-white)] shadow-sm' : 'hover:bg-[var(--surface-gray-3)]'"
                 class="p-2 rounded-full transition-all duration-200 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
@@ -23,7 +23,7 @@
 
         <!-- Ok (Neutral face) -->
         <button type="button"
-                @click="feedbackType = 'Ok'"
+                @click="selectFeedback('Ok')"
                 :disabled="submitted"
                 :class="feedbackType === 'Ok' ? 'bg-[var(--surface-white)] shadow-sm' : 'hover:bg-[var(--surface-gray-3)]'"
                 class="p-2 rounded-full transition-all duration-200 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
@@ -40,7 +40,7 @@
 
         <!-- Bad (Sad face) -->
         <button type="button"
-                @click="feedbackType = 'Bad'"
+                @click="selectFeedback('Bad')"
                 :disabled="submitted"
                 :class="feedbackType === 'Bad' ? 'bg-[var(--surface-white)] shadow-sm' : 'hover:bg-[var(--surface-gray-3)]'"
                 class="p-2 rounded-full transition-all duration-200 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
@@ -60,7 +60,8 @@
     <template x-if="feedbackType">
         <div class="mt-4" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 -translate-y-1" x-transition:enter-end="opacity-100 translate-y-0">
             <div class="relative">
-                <textarea x-model="comment"
+                <textarea x-ref="feedbackInput"
+                          x-model="comment"
                           name="feedback"
                           :disabled="submitted"
                           placeholder="Anything you'd like to add?"
@@ -98,19 +99,22 @@
 </form>
 
 <script>
-    // Helper to get CSRF token from cookie
-    function getCsrfToken() {
-        const name = 'csrf_token=';
-        const decodedCookie = decodeURIComponent(document.cookie);
-        const cookies = decodedCookie.split(';');
-        for (let cookie of cookies) {
-            cookie = cookie.trim();
-            if (cookie.indexOf(name) === 0) {
-                return cookie.substring(name.length);
+    // Initialize feedback store for external reset capability
+    document.addEventListener('alpine:init', () => {
+        Alpine.store('feedback', {
+            refreshCallback: null,
+
+            setRefreshCallback(callback) {
+                this.refreshCallback = callback;
+            },
+
+            refresh() {
+                if (this.refreshCallback) {
+                    this.refreshCallback();
+                }
             }
-        }
-        return null;
-    }
+        });
+    });
 
     function feedbackWidget(docName) {
         return {
@@ -120,25 +124,43 @@
             submitting: false,
             submitted: false,
 
+            init() {
+                // Register refresh callback with store
+                Alpine.store('feedback').setRefreshCallback(() => {
+                    this.reset();
+                });
+            },
+
+            reset() {
+                this.feedbackType = null;
+                this.comment = '';
+                this.submitting = false;
+                this.submitted = false;
+            },
+
+            selectFeedback(type) {
+                this.feedbackType = type;
+                // Focus the textarea after it renders
+                this.$nextTick(() => {
+                    if (this.$refs.feedbackInput) {
+                        this.$refs.feedbackInput.focus();
+                    }
+                });
+            },
+
             async submit() {
                 if (!this.feedbackType || this.submitting || this.submitted) return;
 
                 this.submitting = true;
 
                 try {
-                    const csrfToken = getCsrfToken();
-                    const headers = {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json'
-                    };
-
-                    if (csrfToken) {
-                        headers['X-Frappe-CSRF-Token'] = csrfToken;
-                    }
-
                     const response = await fetch('/api/method/wiki.wiki.doctype.wiki_feedback.wiki_feedback.submit_feedback', {
                         method: 'POST',
-                        headers: headers,
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-Frappe-CSRF-Token': window.CSRF_TOKEN
+                        },
                         body: JSON.stringify({
                             wiki_document: this.docName,
                             type: this.feedbackType,

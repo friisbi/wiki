@@ -122,7 +122,10 @@
                 try {
                     const response = await fetch('/api/method/wiki.frappe_wiki.doctype.wiki_document.wiki_document.get_page_data', {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Frappe-CSRF-Token': window.CSRF_TOKEN
+                        },
                         body: JSON.stringify({ route })
                     });
                     const data = await response.json();
@@ -152,7 +155,10 @@
                 try {
                     const response = await fetch('/api/method/wiki.frappe_wiki.doctype.wiki_document.wiki_document.get_page_data', {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Frappe-CSRF-Token': window.CSRF_TOKEN
+                        },
                         body: JSON.stringify({ route })
                     });
                     const data = await response.json();
@@ -197,6 +203,11 @@
                 // Reinitialize TOC
                 if (Alpine.store('toc')) {
                     Alpine.store('toc').refresh();
+                }
+
+                // Reset feedback widget
+                if (Alpine.store('feedback')) {
+                    Alpine.store('feedback').refresh();
                 }
 
                 // Re-apply syntax highlighting and code block enhancements

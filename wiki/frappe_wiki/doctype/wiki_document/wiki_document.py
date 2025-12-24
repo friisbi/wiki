@@ -243,6 +243,12 @@ class WikiDocumentRenderer(BaseRenderer):
 	def render(self):
 		doc = frappe.get_cached_doc("Wiki Document", self.wiki_doc_name)
 		context = doc.get_web_context()
+
+		csrf_token = frappe.sessions.get_csrf_token()
+		frappe.db.commit()  # nosemgrep
+
+		context["csrf_token"] = csrf_token
+
 		html = frappe.render_template("templates/wiki/document.html", context)
 		return self.build_response(html)
 
