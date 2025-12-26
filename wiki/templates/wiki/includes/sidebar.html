@@ -245,6 +245,10 @@
                 const editLink = document.getElementById('wiki-edit-link');
                 if (editLink) editLink.setAttribute('href', data.edit_link);
 
+                // Update last updated
+                const lastUpdatedEl = document.getElementById('wiki-last-updated');
+                if (lastUpdatedEl) lastUpdatedEl.textContent = 'Last updated ' + data.last_updated;
+
                 // Reinitialize TOC
                 if (Alpine.store('toc')) {
                     Alpine.store('toc').refresh();
