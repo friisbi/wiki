@@ -182,11 +182,19 @@ class WikiDocument(NestedSet):
 		nested_tree, adjacent_docs = self.get_tree_and_navigation()
 		content_html = render_markdown(self.content)
 
+		wiki_spaces_for_switcher = frappe.get_all(
+			"Wiki Space",
+			fields=["name", "space_name", "route", "light_mode_logo"],
+			or_filters={"show_in_switcher": 1, "name": wiki_space.name},
+			order_by="space_name asc",
+		)
+
 		return {
 			"doc": self,
 			"title": self.title,
 			"route": self.route,
 			"wiki_space": wiki_space_doc,
+			"wiki_spaces_for_switcher": wiki_spaces_for_switcher,
 			"rendered_content": content_html,
 			"raw_markdown": self.content or "",
 			"nested_tree": nested_tree,

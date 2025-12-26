@@ -13,14 +13,59 @@
      x-transition:leave-start="w-72 opacity-100"
      x-transition:leave-end="w-0 opacity-0">
 
-    <!-- Fixed Header -->
+    <!-- Fixed Header with Wiki Space Switcher -->
     <div class="p-4 border-b border-[var(--outline-gray-1)] bg-[var(--surface-white)] flex-shrink-0">
+        {% if wiki_spaces_for_switcher and wiki_spaces_for_switcher|length > 1 %}
+        <div class="relative" x-data="{ spaceSwitcherOpen: false }" @click.outside="spaceSwitcherOpen = false">
+            <button @click="spaceSwitcherOpen = !spaceSwitcherOpen"
+                    class="w-full flex items-center gap-3 p-2 -m-2 rounded-lg hover:bg-[var(--surface-gray-2)] transition-colors duration-200 cursor-pointer">
+                {% if wiki_space.light_mode_logo %}
+                <img class="size-8 flex-shrink-0" src="{{ wiki_space.light_mode_logo }}"/>
+                {% endif %}
+                <h3 class="text-lg font-semibold text-[var(--ink-gray-9)] flex-1 text-left truncate">{{ wiki_space.space_name or _("Wiki") }}</h3>
+                <svg class="w-4 h-4 text-[var(--ink-gray-5)] flex-shrink-0 transition-transform duration-200" :class="{ 'rotate-180': spaceSwitcherOpen }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                </svg>
+            </button>
+
+            <!-- Dropdown Menu -->
+            <div x-show="spaceSwitcherOpen"
+                 x-cloak
+                 x-transition:enter="transition ease-out duration-100"
+                 x-transition:enter-start="opacity-0 scale-95"
+                 x-transition:enter-end="opacity-100 scale-100"
+                 x-transition:leave="transition ease-in duration-75"
+                 x-transition:leave-start="opacity-100 scale-100"
+                 x-transition:leave-end="opacity-0 scale-95"
+                 class="absolute left-0 right-0 mt-2 bg-[var(--surface-white)] border border-[var(--outline-gray-1)] rounded-lg shadow-lg z-50 py-1 max-h-64 overflow-y-auto">
+                {% for space in wiki_spaces_for_switcher %}
+                <a href="/{{ space.route }}"
+                   class="flex items-center gap-3 px-4 py-2.5 text-sm transition-colors duration-150 {{ 'bg-[var(--surface-gray-2)] text-[var(--ink-gray-9)]' if space.name == wiki_space.name else 'text-[var(--ink-gray-7)] hover:bg-[var(--surface-gray-2)] hover:text-[var(--ink-gray-9)]' }}">
+                    {% if space.light_mode_logo %}
+                    <img class="size-5 flex-shrink-0" src="{{ space.light_mode_logo }}"/>
+                    {% else %}
+                    <div class="size-5 flex-shrink-0 rounded bg-[var(--surface-gray-3)] flex items-center justify-center">
+                        <span class="text-xs font-medium text-[var(--ink-gray-5)]">{{ space.space_name[:1]|upper }}</span>
+                    </div>
+                    {% endif %}
+                    <span class="truncate">{{ space.space_name }}</span>
+                    {% if space.name == wiki_space.name %}
+                    <svg class="w-4 h-4 ml-auto text-[var(--ink-gray-9)] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    {% endif %}
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+        {% else %}
         <div class="flex items-center gap-3">
             {% if wiki_space.light_mode_logo %}
             <img class="size-8" src="{{ wiki_space.light_mode_logo }}"/>
             {% endif %}
             <h3 class="text-lg font-semibold text-[var(--ink-gray-9)]">{{ wiki_space.space_name or _("Wiki") }}</h3>
         </div>
+        {% endif %}
     </div>
 
     <!-- Search Button -->
