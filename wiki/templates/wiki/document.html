@@ -101,15 +101,19 @@
 </div>
 
 <script>
-    // Store initial markdown globally for dynamic updates
-    window.wikiPageMarkdown = {{ raw_markdown | tojson }};
+    // Initialize page content store for reactive updates during navigation
+    document.addEventListener('alpine:init', () => {
+        Alpine.store('pageContent', {
+            markdown: {{ raw_markdown | tojson }}
+        });
+    });
 
     function wikiDocument() {
         return {
             copied: false,
 
             get markdown() {
-                return window.wikiPageMarkdown || '';
+                return this.$store.pageContent?.markdown || '';
             },
 
             copyMarkdown() {

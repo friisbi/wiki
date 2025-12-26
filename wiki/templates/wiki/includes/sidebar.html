@@ -239,7 +239,9 @@
                 this.updateNavButtons(data.prev_doc, data.next_doc);
 
                 // Update raw markdown for wikiDocument() component
-                window.wikiPageMarkdown = data.raw_markdown;
+                if (Alpine.store('pageContent')) {
+                    Alpine.store('pageContent').markdown = data.raw_markdown;
+                }
 
                 // Update edit link
                 const editLink = document.getElementById('wiki-edit-link');
