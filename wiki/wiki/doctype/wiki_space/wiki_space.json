@@ -15,6 +15,7 @@
   "app_switcher_logo",
   "favicon",
   "enable_feedback_collection",
+  "show_in_switcher",
   "section_break_z5nn",
   "wiki_sidebars",
   "navbar_tab",
@@ -118,11 +119,18 @@
    "fieldname": "enable_feedback_collection",
    "fieldtype": "Check",
    "label": "Enable Feedback Collection?"
+  },
+  {
+   "default": "1",
+   "fieldname": "show_in_switcher",
+   "fieldtype": "Check",
+   "in_standard_filter": 1,
+   "label": "Show in switcher?"
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-12-24 14:39:58.812368",
+ "modified": "2025-12-26 11:43:49.389346",
  "modified_by": "Administrator",
  "module": "Wiki",
  "name": "Wiki Space",

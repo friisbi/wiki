@@ -24,6 +24,7 @@ class WikiSpace(Document):
 		navbar_items: DF.Table[TopBarItem]
 		root_group: DF.Link | None
 		route: DF.Data
+		show_in_switcher: DF.Check
 		space_name: DF.Data | None
 		wiki_sidebars: DF.Table[WikiGroupItem]
 	# end: auto-generated types

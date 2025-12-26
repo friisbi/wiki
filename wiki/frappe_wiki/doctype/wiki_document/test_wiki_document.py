@@ -3,6 +3,7 @@
 
 import unittest
 
+import frappe
 from frappe.tests import IntegrationTestCase
 
 from wiki.wiki.markdown import render_markdown
@@ -21,6 +22,215 @@ class IntegrationTestWikiDocument(IntegrationTestCase):
 	"""
 
 	pass
+
+
+class TestGetWebContext(IntegrationTestCase):
+	"""
+	Unit tests for the get_web_context method of WikiDocument.
+	Tests navigation (prev/next doc) edge cases and wiki spaces switcher.
+	"""
+
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		cls.test_docs = []
+		cls.test_spaces = []
+
+	def tearDown(self):
+		# Clean up test documents
+		for doc_name in reversed(self.test_docs):
+			if frappe.db.exists("Wiki Document", doc_name):
+				frappe.delete_doc("Wiki Document", doc_name, force=True)
+		self.test_docs = []
+
+		# Clean up test spaces
+		for space_name in self.test_spaces:
+			if frappe.db.exists("Wiki Space", space_name):
+				frappe.delete_doc("Wiki Space", space_name, force=True)
+		self.test_spaces = []
+
+	def _create_wiki_document(self, title, parent=None, is_group=False, is_published=True, sort_order=0):
+		"""Helper to create a wiki document for testing."""
+		doc = frappe.get_doc(
+			{
+				"doctype": "Wiki Document",
+				"title": title,
+				"parent_wiki_document": parent,
+				"is_group": is_group,
+				"is_published": is_published,
+				"sort_order": sort_order,
+				"content": f"Content for {title}",
+			}
+		)
+		doc.insert(ignore_permissions=True)
+		self.test_docs.append(doc.name)
+		return doc
+
+	def _create_wiki_space(self, space_name, route, root_group, show_in_switcher=True):
+		"""Helper to create a wiki space for testing."""
+		doc = frappe.get_doc(
+			{
+				"doctype": "Wiki Space",
+				"space_name": space_name,
+				"route": route,
+				"root_group": root_group,
+				"show_in_switcher": show_in_switcher,
+			}
+		)
+		doc.insert(ignore_permissions=True)
+		self.test_spaces.append(doc.name)
+		return doc
+
+	def test_first_document_has_no_prev_doc(self):
+		"""Test that the first document in the tree has no previous document."""
+		# Create a simple tree: Root Group -> Doc1 -> Doc2 -> Doc3
+		root_group = self._create_wiki_document("Test Root Group", is_group=True)
+		doc1 = self._create_wiki_document("First Document", parent=root_group.name)
+		self._create_wiki_document("Second Document", parent=root_group.name)
+		self._create_wiki_document("Third Document", parent=root_group.name)
+
+		# Create wiki space
+		self._create_wiki_space("Test Space", "test-space", root_group.name)
+
+		# Get context for the first document
+		doc1.reload()
+		context = doc1.get_web_context()
+
+		# First document should have no prev_doc but should have next_doc
+		self.assertIsNone(context["prev_doc"])
+		self.assertIsNotNone(context["next_doc"])
+		self.assertEqual(context["next_doc"]["title"], "Second Document")
+
+	def test_last_document_has_no_next_doc(self):
+		"""Test that the last document in the tree has no next document."""
+		# Create a simple tree: Root Group -> Doc1 -> Doc2 -> Doc3
+		root_group = self._create_wiki_document("Test Root Group Last", is_group=True)
+		self._create_wiki_document("First Doc", parent=root_group.name)
+		self._create_wiki_document("Second Doc", parent=root_group.name)
+		doc3 = self._create_wiki_document("Third Doc", parent=root_group.name)
+
+		# Create wiki space
+		self._create_wiki_space("Test Space Last", "test-space-last", root_group.name)
+
+		# Get context for the last document
+		doc3.reload()
+		context = doc3.get_web_context()
+
+		# Last document should have prev_doc but no next_doc
+		self.assertIsNotNone(context["prev_doc"])
+		self.assertEqual(context["prev_doc"]["title"], "Second Doc")
+		self.assertIsNone(context["next_doc"])
+
+	def test_middle_document_has_both_prev_and_next(self):
+		"""Test that a middle document has both prev and next documents."""
+		# Create a simple tree: Root Group -> Doc1 -> Doc2 -> Doc3
+		root_group = self._create_wiki_document("Test Root Group Middle", is_group=True)
+		self._create_wiki_document("First Page", parent=root_group.name)
+		doc2 = self._create_wiki_document("Middle Page", parent=root_group.name)
+		self._create_wiki_document("Last Page", parent=root_group.name)
+
+		# Create wiki space
+		self._create_wiki_space("Test Space Middle", "test-space-middle", root_group.name)
+
+		# Get context for the middle document
+		doc2.reload()
+		context = doc2.get_web_context()
+
+		# Middle document should have both prev_doc and next_doc
+		self.assertIsNotNone(context["prev_doc"])
+		self.assertEqual(context["prev_doc"]["title"], "First Page")
+		self.assertIsNotNone(context["next_doc"])
+		self.assertEqual(context["next_doc"]["title"], "Last Page")
+
+	def test_single_document_has_no_prev_or_next(self):
+		"""Test that a single document in the tree has neither prev nor next."""
+		# Create a tree with only one document
+		root_group = self._create_wiki_document("Test Root Group Single", is_group=True)
+		only_doc = self._create_wiki_document("Only Document", parent=root_group.name)
+
+		# Create wiki space
+		self._create_wiki_space("Test Space Single", "test-space-single", root_group.name)
+
+		# Get context for the only document
+		only_doc.reload()
+		context = only_doc.get_web_context()
+
+		# Single document should have neither prev_doc nor next_doc
+		self.assertIsNone(context["prev_doc"])
+		self.assertIsNone(context["next_doc"])
+
+	def test_wiki_spaces_for_switcher_includes_current_space_even_if_not_published(self):
+		"""
+		Test that wiki_spaces_for_switcher includes the current space
+		even when show_in_switcher is disabled, because of or_filters.
+		"""
+		# Create three wiki spaces with their root groups
+		root1 = self._create_wiki_document("Root Group Space 1", is_group=True)
+		doc1 = self._create_wiki_document("Doc in Space 1", parent=root1.name)
+
+		root2 = self._create_wiki_document("Root Group Space 2", is_group=True)
+		self._create_wiki_document("Doc in Space 2", parent=root2.name)
+
+		root3 = self._create_wiki_document("Root Group Space 3", is_group=True)
+		self._create_wiki_document("Doc in Space 3", parent=root3.name)
+
+		# Create spaces - Space 1 has show_in_switcher=False but current doc belongs to it
+		self._create_wiki_space("Space One", "space-one", root1.name, show_in_switcher=False)
+		self._create_wiki_space("Space Two", "space-two", root2.name, show_in_switcher=True)
+		self._create_wiki_space("Space Three", "space-three", root3.name, show_in_switcher=True)
+
+		# Get context for doc in Space 1 (which has show_in_switcher=False)
+		doc1.reload()
+		context = doc1.get_web_context()
+
+		# wiki_spaces_for_switcher should include all 3 test spaces:
+		# - Space 1 because it's the current space (or_filter: name=space1.name)
+		# - Space 2 and 3 because show_in_switcher=True
+		# Note: There may be other pre-existing spaces in the database
+		switcher_spaces = context["wiki_spaces_for_switcher"]
+		space_names = [s["space_name"] for s in switcher_spaces]
+
+		self.assertIn("Space One", space_names)
+		self.assertIn("Space Two", space_names)
+		self.assertIn("Space Three", space_names)
+		# Ensure at least our 3 test spaces are included
+		self.assertGreaterEqual(len(switcher_spaces), 3)
+
+	def test_wiki_spaces_for_switcher_excludes_hidden_spaces(self):
+		"""
+		Test that wiki_spaces_for_switcher excludes spaces with show_in_switcher=False
+		when viewing a document from a different space.
+		"""
+		# Create three wiki spaces with their root groups
+		root1 = self._create_wiki_document("Root Hidden Space", is_group=True)
+		self._create_wiki_document("Doc in Hidden Space", parent=root1.name)
+
+		root2 = self._create_wiki_document("Root Visible Space", is_group=True)
+		doc2 = self._create_wiki_document("Doc in Visible Space", parent=root2.name)
+
+		root3 = self._create_wiki_document("Root Another Visible", is_group=True)
+		self._create_wiki_document("Doc in Another Visible", parent=root3.name)
+
+		# Create spaces - Space 1 (Hidden) has show_in_switcher=False
+		self._create_wiki_space("Hidden Space", "hidden-space", root1.name, show_in_switcher=False)
+		self._create_wiki_space("Visible Space", "visible-space", root2.name, show_in_switcher=True)
+		self._create_wiki_space("Another Visible", "another-visible", root3.name, show_in_switcher=True)
+
+		# Get context for doc in Visible Space
+		doc2.reload()
+		context = doc2.get_web_context()
+
+		# wiki_spaces_for_switcher should include only visible spaces + current space
+		# Since current space (Visible Space) has show_in_switcher=True,
+		# Hidden Space should be excluded
+		switcher_spaces = context["wiki_spaces_for_switcher"]
+		space_names = [s["space_name"] for s in switcher_spaces]
+
+		self.assertNotIn("Hidden Space", space_names)
+		self.assertIn("Visible Space", space_names)
+		self.assertIn("Another Visible", space_names)
+		# At least our 2 visible test spaces should be included
+		self.assertGreaterEqual(len(switcher_spaces), 2)
 
 
 class TestMarkdownCallouts(unittest.TestCase):
