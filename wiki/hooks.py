@@ -174,5 +174,5 @@ after_install = "wiki.install.after_install"
 # auto_cancel_exempted_doctypes = ["Auto Repeat"]
 
 website_route_rules = [
-	{"from_route": "/frontend/<path:app_path>", "to_route": "frontend"},
+	{"from_route": "/wiki/<path:app_path>", "to_route": "wiki"},
 ]

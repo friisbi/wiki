@@ -109,7 +109,7 @@ class WikiDocument(NestedSet):
 		wiki_space = self.get_wiki_space()
 		if not wiki_space:
 			return ""
-		return f"/frontend/spaces/{wiki_space.name}/page/{self.name}"
+		return f"/wiki/spaces/{wiki_space.name}/page/{self.name}"
 
 	def check_guest_access(self):
 		"""
