@@ -66,7 +66,7 @@ class TestGetWebContext(IntegrationTestCase):
 		self.test_docs.append(doc.name)
 		return doc
 
-	def _create_wiki_space(self, space_name, route, root_group, show_in_switcher=True):
+	def _create_wiki_space(self, space_name, route, root_group, show_in_switcher=True, is_published=True):
 		"""Helper to create a wiki space for testing."""
 		doc = frappe.get_doc(
 			{
@@ -75,6 +75,7 @@ class TestGetWebContext(IntegrationTestCase):
 				"route": route,
 				"root_group": root_group,
 				"show_in_switcher": show_in_switcher,
+				"is_published": is_published,
 			}
 		)
 		doc.insert(ignore_permissions=True)
