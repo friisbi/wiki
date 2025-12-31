@@ -255,16 +255,25 @@ class WikiDocumentRenderer(BaseRenderer):
 			self.wiki_doc_name = document.name
 			return True
 
+		# Get root group - either from a group document or from a Wiki Space route
+		root_group = None
 		if document and document.is_group:
-			# Redirect to first published child document if available
+			root_group = document.name
+		else:
+			# Check if this is a Wiki Space route
+			root_group = frappe.db.get_value(
+				"Wiki Space", {"route": self.path, "is_published": 1}, "root_group"
+			)
+
+		# Redirect to first published child document if available
+		if root_group:
 			child_docs = get_descendants_of(
-				"Wiki Document", document.name, order_by="lft asc, sort_order desc", ignore_permissions=True
+				"Wiki Document", root_group, order_by="lft asc, sort_order desc", ignore_permissions=True
 			)
 			for child_name in child_docs:
 				child_doc = frappe.get_cached_doc("Wiki Document", child_name)
 				if not child_doc.is_group and child_doc.is_published:
-					self.wiki_doc_name = child_doc.name
-					frappe.redirect(child_doc.route)
+					frappe.redirect("/" + child_doc.route)
 
 		return False
 
