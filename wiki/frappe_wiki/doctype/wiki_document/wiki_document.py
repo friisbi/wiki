@@ -276,6 +276,7 @@ class WikiDocument(NestedSet):
 			"next_doc": adjacent_docs["next"],
 			"edit_link": self.get_edit_link(),
 			"last_updated": pretty_date(self.modified),
+			"last_updated_on": frappe.utils.format_datetime(self.modified),
 		}
 
 	@frappe.whitelist()

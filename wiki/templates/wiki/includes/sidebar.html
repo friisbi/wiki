@@ -177,7 +177,13 @@
 
                 // Update last updated
                 const lastUpdatedEl = document.getElementById('wiki-last-updated');
-                if (lastUpdatedEl) lastUpdatedEl.textContent = 'Last updated ' + data.last_updated;
+                if (lastUpdatedEl) {
+                    lastUpdatedEl.textContent = 'Last updated ' + data.last_updated;
+                    if (data.last_updated_on) {
+                        lastUpdatedEl.setAttribute('title', data.last_updated_on);
+                        lastUpdatedEl.setAttribute('data-timestamp', data.last_updated_on);
+                    }
+                }
 
                 // Reinitialize TOC
                 if (Alpine.store('toc')) {
