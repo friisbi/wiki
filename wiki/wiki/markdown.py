@@ -17,6 +17,7 @@ Supported types: note, tip, caution, danger, warning (alias for caution)
 """
 
 import re
+from urllib.parse import quote
 
 import mistune
 
@@ -119,6 +120,54 @@ def _replace_callout_placeholders(html, callouts, placeholder_prefix, md_instanc
 	return html
 
 
+# Pattern to match markdown image syntax: ![alt](url) or ![alt](url "title")
+# Captures: alt text, URL, and optional title
+IMAGE_PATTERN = re.compile(
+	r'!\[([^\]]*)\]\(([^)"\s]+(?:\s[^)]*)?)\)',
+)
+
+
+def _encode_image_url_spaces(content: str) -> str:
+	"""
+	Pre-process markdown to URL-encode spaces in image URLs.
+
+	Mistune (unlike markdown2) doesn't handle spaces in URLs, so we need to
+	encode them before parsing. This function finds all image syntax and
+	encodes spaces in the URL portion.
+
+	Args:
+	    content: Markdown string
+
+	Returns:
+	    Markdown string with spaces in image URLs encoded as %20
+	"""
+
+	def encode_url(match):
+		alt_text = match.group(1)
+		url_part = match.group(2)
+
+		# Split URL and optional title (title is in quotes after a space)
+		# e.g., '/path/to/image.png "Image Title"'
+		title_match = re.match(r'^([^"]+?)(?:\s+"([^"]*)")?$', url_part)
+		if title_match:
+			url = title_match.group(1).strip()
+			title = title_match.group(2)
+		else:
+			url = url_part
+			title = None
+
+		# Only encode spaces, preserve other characters
+		# quote() with safe='' would encode everything, but we only want spaces
+		encoded_url = url.replace(" ", "%20")
+
+		# Reconstruct the image syntax
+		if title:
+			return f'![{alt_text}]({encoded_url} "{title}")'
+		return f"![{alt_text}]({encoded_url})"
+
+	return IMAGE_PATTERN.sub(encode_url, content)
+
+
 class WikiRenderer(mistune.HTMLRenderer):
 	"""Custom HTML renderer with image caption support."""
 
@@ -180,13 +229,16 @@ def render_markdown(content: str) -> str:
 		escape=False,
 	)
 
-	# Step 1: Extract callouts and replace with placeholders
-	processed_content, callouts, placeholder_prefix = _process_callouts_with_placeholders(content)
+	# Step 1: URL-encode spaces in image URLs (mistune doesn't handle them)
+	processed_content = _encode_image_url_spaces(content)
 
-	# Step 2: Render markdown (placeholders will be wrapped in <p> tags)
+	# Step 2: Extract callouts and replace with placeholders
+	processed_content, callouts, placeholder_prefix = _process_callouts_with_placeholders(processed_content)
+
+	# Step 3: Render markdown (placeholders will be wrapped in <p> tags)
 	html = md(processed_content)
 
-	# Step 3: Replace placeholders with actual callout HTML
+	# Step 4: Replace placeholders with actual callout HTML
 	html = _replace_callout_placeholders(html, callouts, placeholder_prefix, md)
 
 	return html

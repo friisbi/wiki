@@ -183,6 +183,99 @@ Content
 		self.assertIn("Custom Title", result)
 
 
+class TestComplexMarkdownContent(unittest.TestCase):
+	"""Tests for complex markdown content with callouts and images."""
+
+	def test_markdown_with_callouts_and_images(self):
+		"""Test markdown content with callouts and images that have spaces in URLs.
+
+		The renderer should automatically URL-encode spaces in image URLs.
+		"""
+		# Note: URLs have UNENCODED spaces - the renderer should handle this
+		content = """## Method 1: Download and Install from Windows PC (USB)
+
+:::note
+This is the recommended method for Windows users
+:::
+
+:::warning
+You need a USB drive with at least 8GB of storage for this method.
+:::
+
+Once you have installed the app, you will need to set up your account. Visit your newly created site that has the app installed, and you should see a setup wizard.
+
+![Screenshot 2024-05-16 at 3.55.11 PM](/files/Screenshot 2024-05-16 at 3.55.11 PM.png)
+
+To complete the setup you will need to enter basic information like your country, name, email, and password. Make sure to remember your email and password as this is going to be your admin account.
+
+Once you complete the setup wizard, you will be redirected to the workspace of the Learning app. The top section of the workspace provides some important quick links. You can visit the Learning Portal and start setting up your very first course. The workspace also has some important charts. They show the count of daily signups and enrollments on the LMS.
+
+![Screenshot 2024-05-16 at 3.57.40 PM](/files/Screenshot 2024-05-16 at 3.57.40 PM.png)
+
+Some text after."""
+
+		result = render_markdown(content)
+
+		# Check headings
+		self.assertIn("<h2>Method 1: Download and Install from Windows PC (USB)</h2>", result)
+
+		# Check callouts
+		self.assertIn("callout-note", result)
+		self.assertIn("This is the recommended method for Windows users", result)
+		self.assertIn("callout-caution", result)  # warning maps to caution
+		self.assertIn("You need a USB drive with at least 8GB of storage for this method.", result)
+
+		# Check images are rendered with figure/figcaption
+		# Spaces in URLs should be automatically encoded to %20
+		self.assertIn('<figure class="wiki-image-figure">', result)
+		self.assertIn('<img src="/files/Screenshot%202024-05-16%20at%203.55.11%20PM.png"', result)
+		self.assertIn('alt="Screenshot 2024-05-16 at 3.55.11 PM"', result)
+		self.assertIn(
+			'<figcaption class="wiki-image-caption">Screenshot 2024-05-16 at 3.55.11 PM</figcaption>', result
+		)
+
+		self.assertIn('<img src="/files/Screenshot%202024-05-16%20at%203.57.40%20PM.png"', result)
+		self.assertIn('alt="Screenshot 2024-05-16 at 3.57.40 PM"', result)
+		self.assertIn(
+			'<figcaption class="wiki-image-caption">Screenshot 2024-05-16 at 3.57.40 PM</figcaption>', result
+		)
+
+		# Ensure images are NOT rendered as broken !<a> syntax
+		self.assertNotIn("!<a href=", result)
+		self.assertNotIn(">Screenshot 2024-05-16 at 3.55.11 PM</a>", result)
+
+
+class TestImageUrlSpaceEncoding(unittest.TestCase):
+	"""Tests for automatic URL-encoding of spaces in image URLs."""
+
+	def test_simple_image_with_spaces(self):
+		"""Test that spaces in image URLs are automatically encoded."""
+		content = "![My Image](/files/my image.png)"
+		result = render_markdown(content)
+
+		self.assertIn('<img src="/files/my%20image.png"', result)
+		self.assertIn('alt="My Image"', result)
+		self.assertNotIn("![My Image]", result)
+
+	def test_image_with_title_and_spaces(self):
+		"""Test image with title attribute and spaces in URL."""
+		content = '![Alt Text](/files/path with spaces/image.png "Image Title")'
+		result = render_markdown(content)
+
+		self.assertIn('<img src="/files/path%20with%20spaces/image.png"', result)
+		self.assertIn('alt="Alt Text"', result)
+		self.assertIn('title="Image Title"', result)
+
+	def test_already_encoded_url_unchanged(self):
+		"""Test that already URL-encoded URLs are not double-encoded."""
+		content = "![My Image](/files/my%20image.png)"
+		result = render_markdown(content)
+
+		# Should not double-encode %20 to %2520
+		self.assertIn('<img src="/files/my%20image.png"', result)
+		self.assertNotIn("%2520", result)
+
+
 class TestTableRendering(unittest.TestCase):
 	"""Tests for table rendering."""
 
