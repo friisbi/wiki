@@ -1,6 +1,6 @@
 <template>
     <NodeViewWrapper class="wiki-image-wrapper" :class="{ 'is-selected': selected }">
-        <figure class="wiki-image-figure">
+        <div class="wiki-image-container">
             <img
                 :src="node.attrs.src"
                 :alt="node.attrs.alt || ''"
@@ -11,7 +11,7 @@
                 @click="selectNode"
             />
             <input
-                v-if="editor.isEditable || node.attrs.alt"
+                v-if="editor.isEditable || node.attrs.caption"
                 ref="captionInput"
                 v-model="caption"
                 type="text"
@@ -22,7 +22,7 @@
                 @input="updateCaption"
                 @keydown="handleKeydown"
             />
-        </figure>
+        </div>
     </NodeViewWrapper>
 </template>
 
@@ -54,20 +54,20 @@ const props = defineProps({
 });
 
 const captionInput = ref(null);
-const caption = ref(props.node.attrs.alt || '');
+const caption = ref(props.node.attrs.caption || '');
 
-// Watch for external changes to alt attribute
+// Watch for external changes to caption attribute
 watch(
-    () => props.node.attrs.alt,
-    (newAlt) => {
-        if (newAlt !== caption.value) {
-            caption.value = newAlt || '';
+    () => props.node.attrs.caption,
+    (newCaption) => {
+        if (newCaption !== caption.value) {
+            caption.value = newCaption || '';
         }
     }
 );
 
 function updateCaption() {
-    props.updateAttributes({ alt: caption.value });
+    props.updateAttributes({ caption: caption.value });
 }
 
 function selectNode() {
@@ -115,7 +115,7 @@ function handleKeydown(event) {
     outline-offset: 2px;
 }
 
-.wiki-image-figure {
+.wiki-image-container {
     display: flex;
     flex-direction: column;
     align-items: center;

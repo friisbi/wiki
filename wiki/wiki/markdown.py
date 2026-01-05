@@ -169,39 +169,18 @@ def _encode_image_url_spaces(content: str) -> str:
 
 
 class WikiRenderer(mistune.HTMLRenderer):
-	"""Custom HTML renderer with image caption support."""
+	"""Custom HTML renderer.
 
-	def image(self, text: str, url: str, title: str | None = None) -> str:
-		"""
-		Render images with figure/figcaption when alt text (caption) is present.
+	Image captions use the Stack Overflow pattern:
+	    ![alt text](image.jpg)
+	    *caption text*
 
-		Args:
-		    text: Alt text / caption for the image
-		    url: Image URL
-		    title: Optional title attribute
-		"""
-		from mistune.renderers.html import escape_text, striptags
+	This renders as <p><img ...><em>caption</em></p> (no blank line between).
+	Style with CSS: img + em { ... }
+	Alt text remains for accessibility, caption is separate.
+	"""
 
-		src = self.safe_url(url)
-		alt = escape_text(striptags(text))
-
-		# Build the img tag
-		img_tag = f'<img src="{src}" alt="{alt}"'
-		if title:
-			img_tag += f' title="{title}"'
-		img_tag += " />"
-
-		# If there's alt text, wrap in figure with figcaption
-		if alt:
-			return (
-				f'<figure class="wiki-image-figure">'
-				f"{img_tag}"
-				f'<figcaption class="wiki-image-caption">{alt}</figcaption>'
-				f"</figure>"
-			)
-
-		# No caption, just return the image
-		return img_tag
+	pass  # Use default mistune rendering
 
 
 def render_markdown(content: str) -> str:

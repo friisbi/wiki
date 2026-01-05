@@ -34,25 +34,36 @@ class TestMarkdownRenderer(unittest.TestCase):
 
 
 class TestImageCaptionSupport(unittest.TestCase):
-	"""Tests for image caption support in markdown."""
+	"""Tests for image caption support in markdown.
 
-	def test_image_with_caption(self):
-		"""Test that images with alt text render with figure and figcaption."""
-		result = render_markdown("![This is a caption](/files/test.jpg)")
+	Captions use the Stack Overflow pattern:
+	![alt text](image.jpg)
+	*caption text*
 
-		# Should have figure wrapper
-		self.assertIn('<figure class="wiki-image-figure">', result)
-		self.assertIn("</figure>", result)
+	This renders as <p><img ...><em>caption</em></p> (no blank line between).
+	The alt text is for accessibility; caption is separate emphasized text.
+	"""
+
+	def test_image_with_caption_pattern(self):
+		"""Test image with caption on next line (no blank line)."""
+		# No blank line between image and caption
+		content = """![Alt text](/files/test.jpg)
+*This is the caption*"""
+		result = render_markdown(content)
 
 		# Should have image with alt
 		self.assertIn('<img src="/files/test.jpg"', result)
-		self.assertIn('alt="This is a caption"', result)
+		self.assertIn('alt="Alt text"', result)
 
-		# Should have figcaption with caption text
-		self.assertIn('<figcaption class="wiki-image-caption">This is a caption</figcaption>', result)
+		# Should have em for caption (styled via CSS img + em)
+		self.assertIn("<em>This is the caption</em>", result)
+
+		# Should NOT have figure/figcaption (old pattern)
+		self.assertNotIn("<figure", result)
+		self.assertNotIn("<figcaption", result)
 
 	def test_image_without_caption(self):
-		"""Test that images without alt text render as simple img tags."""
+		"""Test that images without caption render as simple img tags."""
 		result = render_markdown("![](/files/test.jpg)")
 
 		# Should NOT have figure wrapper
@@ -64,59 +75,53 @@ class TestImageCaptionSupport(unittest.TestCase):
 
 	def test_image_with_title(self):
 		"""Test that images with title attribute render correctly."""
-		result = render_markdown('![Caption](/files/test.jpg "Image title")')
-
-		# Should have figure wrapper
-		self.assertIn('<figure class="wiki-image-figure">', result)
+		result = render_markdown('![Alt text](/files/test.jpg "Image title")')
 
 		# Should have image with alt and title
-		self.assertIn('alt="Caption"', result)
+		self.assertIn('alt="Alt text"', result)
 		self.assertIn('title="Image title"', result)
 
-		# Should have figcaption
-		self.assertIn('<figcaption class="wiki-image-caption">Caption</figcaption>', result)
+		# Should NOT have figure/figcaption
+		self.assertNotIn("<figure", result)
+		self.assertNotIn("<figcaption", result)
 
-	def test_image_caption_escapes_html(self):
-		"""Test that caption text is properly escaped."""
+	def test_image_alt_escapes_html(self):
+		"""Test that alt text is properly escaped."""
 		result = render_markdown("![<script>alert('xss')</script>](/files/test.jpg)")
 
 		# Script tags should be escaped, not rendered as HTML
 		self.assertNotIn("<script>alert", result)
-		# The escaping is double-encoded due to how mistune processes
-		self.assertIn("&amp;lt;script&amp;gt;", result)
 
 	def test_multiple_images_with_captions(self):
-		"""Test multiple images in same content."""
-		content = """
-![First image](/files/first.jpg)
+		"""Test multiple images with captions."""
+		content = """![First image](/files/first.jpg)
+*Caption for first image*
 
 Some text between images.
 
 ![Second image](/files/second.jpg)
-"""
+*Caption for second image*"""
 		result = render_markdown(content)
 
-		# Both images should have figures
-		self.assertEqual(result.count('<figure class="wiki-image-figure">'), 2)
-		self.assertEqual(result.count("</figure>"), 2)
+		# Both images should be rendered
+		self.assertIn('<img src="/files/first.jpg"', result)
+		self.assertIn('<img src="/files/second.jpg"', result)
 
-		# Both should have their captions
-		self.assertIn(
-			'<figcaption class="wiki-image-caption">First image</figcaption>',
-			result,
-		)
-		self.assertIn(
-			'<figcaption class="wiki-image-caption">Second image</figcaption>',
-			result,
-		)
+		# Both captions should be in em tags
+		self.assertIn("<em>Caption for first image</em>", result)
+		self.assertIn("<em>Caption for second image</em>", result)
 
-	def test_image_in_paragraph(self):
-		"""Test image within paragraph text."""
-		result = render_markdown("Here is an image: ![my image](/files/img.png) in text.")
+	def test_image_caption_separated_by_blank_line(self):
+		"""Test that blank line between image and caption separates them."""
+		# Blank line between image and caption - they become separate paragraphs
+		content = """![Alt text](/files/test.jpg)
 
-		# Should still have figure
-		self.assertIn('<figure class="wiki-image-figure">', result)
-		self.assertIn('<figcaption class="wiki-image-caption">my image</figcaption>', result)
+*This is NOT a caption, just italic text*"""
+		result = render_markdown(content)
+
+		# Both should render, but in separate paragraphs
+		self.assertIn('<img src="/files/test.jpg"', result)
+		self.assertIn("<em>This is NOT a caption, just italic text</em>", result)
 
 
 class TestCalloutRendering(unittest.TestCase):
@@ -205,12 +210,14 @@ You need a USB drive with at least 8GB of storage for this method.
 Once you have installed the app, you will need to set up your account. Visit your newly created site that has the app installed, and you should see a setup wizard.
 
 ![Screenshot 2024-05-16 at 3.55.11 PM](/files/Screenshot 2024-05-16 at 3.55.11 PM.png)
+*Setup wizard screenshot*
 
 To complete the setup you will need to enter basic information like your country, name, email, and password. Make sure to remember your email and password as this is going to be your admin account.
 
 Once you complete the setup wizard, you will be redirected to the workspace of the Learning app. The top section of the workspace provides some important quick links. You can visit the Learning Portal and start setting up your very first course. The workspace also has some important charts. They show the count of daily signups and enrollments on the LMS.
 
 ![Screenshot 2024-05-16 at 3.57.40 PM](/files/Screenshot 2024-05-16 at 3.57.40 PM.png)
+*Workspace screenshot*
 
 Some text after."""
 
@@ -225,20 +232,20 @@ Some text after."""
 		self.assertIn("callout-caution", result)  # warning maps to caution
 		self.assertIn("You need a USB drive with at least 8GB of storage for this method.", result)
 
-		# Check images are rendered with figure/figcaption
-		# Spaces in URLs should be automatically encoded to %20
-		self.assertIn('<figure class="wiki-image-figure">', result)
+		# Check images are rendered (spaces in URLs automatically encoded to %20)
 		self.assertIn('<img src="/files/Screenshot%202024-05-16%20at%203.55.11%20PM.png"', result)
 		self.assertIn('alt="Screenshot 2024-05-16 at 3.55.11 PM"', result)
-		self.assertIn(
-			'<figcaption class="wiki-image-caption">Screenshot 2024-05-16 at 3.55.11 PM</figcaption>', result
-		)
 
 		self.assertIn('<img src="/files/Screenshot%202024-05-16%20at%203.57.40%20PM.png"', result)
 		self.assertIn('alt="Screenshot 2024-05-16 at 3.57.40 PM"', result)
-		self.assertIn(
-			'<figcaption class="wiki-image-caption">Screenshot 2024-05-16 at 3.57.40 PM</figcaption>', result
-		)
+
+		# Check captions are rendered as em tags
+		self.assertIn("<em>Setup wizard screenshot</em>", result)
+		self.assertIn("<em>Workspace screenshot</em>", result)
+
+		# Should NOT use figure/figcaption pattern
+		self.assertNotIn("<figure", result)
+		self.assertNotIn("<figcaption", result)
 
 		# Ensure images are NOT rendered as broken !<a> syntax
 		self.assertNotIn("!<a href=", result)
@@ -257,6 +264,10 @@ class TestImageUrlSpaceEncoding(unittest.TestCase):
 		self.assertIn('alt="My Image"', result)
 		self.assertNotIn("![My Image]", result)
 
+		# Should NOT use figure/figcaption
+		self.assertNotIn("<figure", result)
+		self.assertNotIn("<figcaption", result)
+
 	def test_image_with_title_and_spaces(self):
 		"""Test image with title attribute and spaces in URL."""
 		content = '![Alt Text](/files/path with spaces/image.png "Image Title")'
@@ -265,6 +276,10 @@ class TestImageUrlSpaceEncoding(unittest.TestCase):
 		self.assertIn('<img src="/files/path%20with%20spaces/image.png"', result)
 		self.assertIn('alt="Alt Text"', result)
 		self.assertIn('title="Image Title"', result)
+
+		# Should NOT use figure/figcaption
+		self.assertNotIn("<figure", result)
+		self.assertNotIn("<figcaption", result)
 
 	def test_already_encoded_url_unchanged(self):
 		"""Test that already URL-encoded URLs are not double-encoded."""
