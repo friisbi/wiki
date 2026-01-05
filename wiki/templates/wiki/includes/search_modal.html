@@ -82,7 +82,7 @@
                 <!-- Results List -->
                 <template x-if="!loading && results.length > 0">
                     <ul class="py-2">
-                        <template x-for="(result, index) in results" :key="result.name">
+                        <template x-for="(result, index) in results" :key="index">
                             <li>
                                 <a :href="'/' + result.route"
                                    @click.prevent="navigateTo(result.route)"

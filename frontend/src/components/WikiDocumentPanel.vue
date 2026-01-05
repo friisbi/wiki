@@ -48,9 +48,7 @@
             </div>
 
             <div class="flex-1 overflow-auto px-6 pb-6">
-                <MilkdownProvider v-if="editorKey" :key="editorKey">
-                    <WikiEditor ref="editorRef" :content="editorContent" :saving="isSaving" @save="saveContent" />
-                </MilkdownProvider>
+                <WikiEditor v-if="editorKey" :key="editorKey" ref="editorRef" :content="editorContent" :saving="isSaving" @save="saveContent" />
             </div>
         </div>
 
@@ -66,7 +64,6 @@
 <script setup>
 import { ref, computed, watch, toRef, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { MilkdownProvider } from "@milkdown/vue";
 import { createDocumentResource, Badge, Button, Dropdown, toast } from "frappe-ui";
 import WikiEditor from './WikiEditor.vue';
 import WikiDocumentSettings from './WikiDocumentSettings.vue';

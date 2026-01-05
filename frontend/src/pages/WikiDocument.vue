@@ -52,16 +52,13 @@
             </div>
         </div>
 
-        <MilkdownProvider>
-            <WikiEditor ref="editorRef" :content="wikiDoc.doc.content" :saving="wikiDoc.setValue.loading" @save="saveContent" />
-        </MilkdownProvider>
+        <WikiEditor ref="editorRef" :content="wikiDoc.doc.content" :saving="wikiDoc.setValue.loading" @save="saveContent" />
     </div>
 </div>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue';
-import { MilkdownProvider } from "@milkdown/vue";
 import { createDocumentResource, createResource, Badge, Button, toast } from "frappe-ui";
 import WikiEditor from '../components/WikiEditor.vue';
 import WikiBreadcrumbs from '../components/WikiBreadcrumbs.vue';

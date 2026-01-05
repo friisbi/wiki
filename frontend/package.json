@@ -11,12 +11,26 @@
     "copy-html-entry": "cp ../wiki/public/frontend/index.html ../wiki/www/wiki.html"
   },
   "dependencies": {
-    "@milkdown/crepe": "^7.15.5",
-    "@milkdown/kit": "^7.15.5",
-    "@milkdown/vue": "^7.15.5",
+    "@floating-ui/dom": "^1.6.0",
+    "@tiptap/core": "^3.14.0",
+    "@tiptap/extension-code-block": "^3.14.0",
+    "@tiptap/extension-code-block-lowlight": "^3.14.0",
+    "@tiptap/extension-image": "^3.14.0",
+    "@tiptap/extension-list": "^3.14.0",
+    "@tiptap/extension-table": "^3.14.0",
+    "@tiptap/extensions": "^3.14.0",
+    "@tiptap/markdown": "^3.14.0",
+    "@tiptap/pm": "^3.14.0",
+    "@tiptap/starter-kit": "^3.14.0",
+    "@tiptap/suggestion": "^3.14.0",
+    "@tiptap/vue-3": "^3.14.0",
+    "lucide-vue-next": "^0.468.0",
+    "tippy.js": "^6.3.7",
     "@vueuse/core": "^14.1.0",
     "feather-icons": "^4.29.2",
     "frappe-ui": "^0.1.235",
+    "highlight.js": "^11.11.1",
+    "lowlight": "^3.3.0",
     "socket.io-client": "^4.7.2",
     "vue": "^3.5.13",
     "vue-router": "^4.5.0",
@@ -31,6 +45,9 @@
     "vite": "^5.4.10"
   },
   "resolutions": {
-    "prosemirror-model": "^1.24.1"
+    "prosemirror-model": "^1.24.1",
+    "prosemirror-state": "^1.4.3",
+    "prosemirror-view": "^1.33.0",
+    "prosemirror-transform": "^1.9.0"
   }
 }
