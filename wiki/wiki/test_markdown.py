@@ -291,6 +291,63 @@ class TestImageUrlSpaceEncoding(unittest.TestCase):
 		self.assertNotIn("%2520", result)
 
 
+class TestRawHTMLRendering(unittest.TestCase):
+	"""Tests for raw HTML rendering in markdown.
+
+	HTML should pass through without being escaped when escape=False
+	is configured on the renderer.
+	"""
+
+	def test_raw_html_div_not_escaped(self):
+		"""Test that raw HTML div tags are not escaped."""
+		content = '<div align="center"><img src="/files/hero-image.png"></div>'
+		result = render_markdown(content)
+
+		# HTML should be preserved, not escaped
+		self.assertIn('<div align="center">', result)
+		self.assertIn('<img src="/files/hero-image.png">', result)
+
+		# Should NOT contain escaped HTML entities
+		self.assertNotIn("&lt;div", result)
+		self.assertNotIn("&gt;", result)
+		self.assertNotIn("&quot;", result)
+
+	def test_raw_html_with_style(self):
+		"""Test that raw HTML with style attributes is preserved."""
+		content = '<div style="margin: 0 0 0 0;"><img src="/files/test.png"></div>'
+		result = render_markdown(content)
+
+		self.assertIn('<div style="margin: 0 0 0 0;">', result)
+		self.assertNotIn("&lt;", result)
+
+	def test_inline_html_in_markdown(self):
+		"""Test inline HTML mixed with markdown."""
+		content = """# Heading
+
+Some paragraph text.
+
+<div align="center">
+<img src="/files/centered-image.png">
+</div>
+
+More text after."""
+		result = render_markdown(content)
+
+		self.assertIn("<h1>Heading</h1>", result)
+		self.assertIn('<div align="center">', result)
+		self.assertIn('<img src="/files/centered-image.png">', result)
+		self.assertIn("</div>", result)
+		self.assertNotIn("&lt;div", result)
+
+	def test_html_span_not_escaped(self):
+		"""Test that span tags are not escaped."""
+		content = 'Text with <span style="color: red;">colored</span> word.'
+		result = render_markdown(content)
+
+		self.assertIn('<span style="color: red;">colored</span>', result)
+		self.assertNotIn("&lt;span", result)
+
+
 class TestTableRendering(unittest.TestCase):
 	"""Tests for table rendering."""
 

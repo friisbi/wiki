@@ -200,15 +200,15 @@ def render_markdown(content: str) -> str:
 		return ""
 
 	# Create a base Mistune markdown instance with custom renderer
+	# Note: escape=False must be passed to the renderer, not create_markdown
 	md = mistune.create_markdown(
-		renderer=WikiRenderer(),
+		renderer=WikiRenderer(escape=False),
 		plugins=[
 			"strikethrough",
 			"footnotes",
 			"table",
 			"task_lists",
 		],
-		escape=False,
 	)
 
 	# Step 1: URL-encode spaces in image URLs (mistune doesn't handle them)
