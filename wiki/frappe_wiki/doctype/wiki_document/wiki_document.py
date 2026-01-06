@@ -255,7 +255,7 @@ class WikiDocument(NestedSet):
 			"Wiki Space",
 			fields=["name", "space_name", "route", "light_mode_logo", "app_switcher_logo"],
 			or_filters={"show_in_switcher": 1, "name": wiki_space.name},
-			order_by="space_name asc",
+			order_by="switcher_order asc, space_name asc",
 		)
 
 		# Process navbar items with icon detection

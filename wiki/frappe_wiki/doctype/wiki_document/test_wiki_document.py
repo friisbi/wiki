@@ -68,7 +68,9 @@ class TestGetWebContext(IntegrationTestCase):
 		self.test_docs.append(doc.name)
 		return doc
 
-	def _create_wiki_space(self, space_name, route, root_group, show_in_switcher=True, is_published=True):
+	def _create_wiki_space(
+		self, space_name, route, root_group, show_in_switcher=True, is_published=True, switcher_order=0
+	):
 		"""Helper to create a wiki space for testing."""
 		doc = frappe.get_doc(
 			{
@@ -78,6 +80,7 @@ class TestGetWebContext(IntegrationTestCase):
 				"root_group": root_group,
 				"show_in_switcher": show_in_switcher,
 				"is_published": is_published,
+				"switcher_order": switcher_order,
 			}
 		)
 		doc.insert(ignore_permissions=True)
@@ -234,6 +237,48 @@ class TestGetWebContext(IntegrationTestCase):
 		self.assertIn("Another Visible", space_names)
 		# At least our 2 visible test spaces should be included
 		self.assertGreaterEqual(len(switcher_spaces), 2)
+
+	def test_wiki_spaces_for_switcher_ordered_by_switcher_order_then_name(self):
+		"""
+		Test that wiki_spaces_for_switcher is ordered by switcher_order first,
+		then alphabetically by space_name.
+		"""
+		# Create wiki spaces with their root groups
+		root1 = self._create_wiki_document("Root Zebra Space", is_group=True)
+		doc1 = self._create_wiki_document("Doc in Zebra Space", parent=root1.name)
+
+		root2 = self._create_wiki_document("Root Alpha Space", is_group=True)
+		self._create_wiki_document("Doc in Alpha Space", parent=root2.name)
+
+		root3 = self._create_wiki_document("Root Beta Space", is_group=True)
+		self._create_wiki_document("Doc in Beta Space", parent=root3.name)
+
+		root4 = self._create_wiki_document("Root Gamma Space", is_group=True)
+		self._create_wiki_document("Doc in Gamma Space", parent=root4.name)
+
+		# Create spaces with different switcher_order values
+		# Zebra has order 1, so should come first despite name
+		# Alpha and Beta both have order 2, so should be sorted alphabetically
+		# Gamma has order 3, so should come last
+		self._create_wiki_space("Zebra Space", "zebra-space", root1.name, switcher_order=1)
+		self._create_wiki_space("Alpha Space", "alpha-space", root2.name, switcher_order=2)
+		self._create_wiki_space("Beta Space", "beta-space", root3.name, switcher_order=2)
+		self._create_wiki_space("Gamma Space", "gamma-space", root4.name, switcher_order=3)
+
+		# Get context for doc in Zebra Space
+		doc1.reload()
+		context = doc1.get_web_context()
+
+		switcher_spaces = context["wiki_spaces_for_switcher"]
+		space_names = [s["space_name"] for s in switcher_spaces]
+
+		# Filter to only our test spaces to avoid interference from other spaces
+		test_space_names = ["Zebra Space", "Alpha Space", "Beta Space", "Gamma Space"]
+		filtered_spaces = [name for name in space_names if name in test_space_names]
+
+		# Expected order: Zebra (order 1), Alpha (order 2), Beta (order 2), Gamma (order 3)
+		expected_order = ["Zebra Space", "Alpha Space", "Beta Space", "Gamma Space"]
+		self.assertEqual(filtered_spaces, expected_order)
 
 
 class TestMarkdownCallouts(unittest.TestCase):

@@ -27,6 +27,7 @@ class WikiSpace(Document):
 		route: DF.Data
 		show_in_switcher: DF.Check
 		space_name: DF.Data | None
+		switcher_order: DF.Int
 		wiki_sidebars: DF.Table[WikiGroupItem]
 	# end: auto-generated types
 
