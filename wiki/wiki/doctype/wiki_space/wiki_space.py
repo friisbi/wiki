@@ -1,141 +1,123 @@
 # Copyright (c) 2023, Frappe and contributors
 # For license information, please see license.txt
-import json
-
 import frappe
-import pymysql
 from frappe.model.document import Document
-
-from wiki.wiki.doctype.wiki_page.search import build_index_in_background, drop_index
 
 
 class WikiSpace(Document):
+	# begin: auto-generated types
+	# This code is auto-generated. Do not modify anything in this block.
+
+	from typing import TYPE_CHECKING
+
+	if TYPE_CHECKING:
+		from frappe.types import DF
+		from frappe.website.doctype.top_bar_item.top_bar_item import TopBarItem
+
+		from wiki.wiki.doctype.wiki_group_item.wiki_group_item import WikiGroupItem
+
+		app_switcher_logo: DF.AttachImage | None
+		dark_mode_logo: DF.AttachImage | None
+		enable_feedback_collection: DF.Check
+		favicon: DF.AttachImage | None
+		is_published: DF.Check
+		light_mode_logo: DF.AttachImage | None
+		navbar_items: DF.Table[TopBarItem]
+		root_group: DF.Link | None
+		route: DF.Data
+		show_in_switcher: DF.Check
+		space_name: DF.Data | None
+		wiki_sidebars: DF.Table[WikiGroupItem]
+	# end: auto-generated types
+
 	def before_insert(self):
-		# insert a new wiki page when sidebar is empty
-		if not self.wiki_sidebars:
-			wiki_page = frappe.get_doc(
+		self.create_root_group()
+
+	def validate(self):
+		self.remove_leading_slash_from_route()
+
+	def remove_leading_slash_from_route(self):
+		if self.route and self.route.startswith("/"):
+			self.route = self.route[1 : len(self.route)]
+
+	def create_root_group(self):
+		if not self.root_group:
+			root_group = frappe.get_doc(
 				{
-					"doctype": "Wiki Page",
-					"title": "New Wiki Page",
-					"route": f"{self.route}/new-wiki-page",
-					"published": 1,
-					"content": f"Welcome to Wiki Space {self.route}",
+					"doctype": "Wiki Document",
+					"title": f"{self.space_name} [Root Group]",
+					"route": f"/{self.route}",
+					"is_group": 1,
+					"published": 0,
+					"content": "[root_group]",
 				}
 			)
-			wiki_page.insert()
-
-			self.append(
-				"wiki_sidebars",
-				{
-					"wiki_page": wiki_page.name,
-					"parent_label": "New Group",
-				},
-			)
-
-	def before_save(self):
-		self.update_wiki_page_routes()
-
-	def update_wiki_page_routes(self):
-		# prepend space route to the route of wiki page
-		old_route = frappe.db.get_value("Wiki Space", self.name, "route")
-		if not old_route or self.route == old_route:
-			return
-
-		for i, wiki_sidebar in enumerate(self.wiki_sidebars):
-			wiki_page = frappe.get_value("Wiki Page", wiki_sidebar.wiki_page, ["name", "route"], as_dict=1)
-			wiki_page_route = wiki_page.route.replace(old_route, self.route, 1)
-
-			frappe.publish_progress(
-				percent=i * 100 / len(self.wiki_sidebars),
-				title=f"Updating Wiki Page routes - <b>{self.route}</b>",
-				description=f"{i}/{len(self.wiki_sidebars)}",
-			)
-
-			try:
-				if wiki_page_route:
-					frappe.db.set_value(
-						"Wiki Page",
-						wiki_sidebar.wiki_page,
-						"route",
-						wiki_page_route,
-					)
-			except Exception as e:
-				if isinstance(e, pymysql.err.IntegrityError):
-					frappe.throw(f"Wiki Page with route <b>{wiki_page.route}</b> already exists.")
-				else:
-					raise e
-
-	def on_update(self):
-		build_index_in_background()
-
-		# clear sidebar cache
-		frappe.cache().hdel("wiki_sidebar", self.name)
-
-	def on_trash(self):
-		drop_index()
-
-		# clear sidebar cache
-		frappe.cache().hdel("wiki_sidebar", self.name)
-		build_index_in_background()
+			root_group.insert()
+			self.root_group = root_group.name
 
 	@frappe.whitelist()
-	def clone_wiki_space_in_background(self, new_space_route):
-		frappe.enqueue(
-			clone_wiki_space,
-			name=self.name,
-			route=self.route,
-			new_space_route=new_space_route,
-			queue="long",
-		)
+	def migrate_to_v3(self):
+		if self.root_group:
+			return  # Migration already done
 
+		self.create_root_group()
+		self.save()
 
-def clone_wiki_space(name, route, new_space_route):
-	if frappe.db.exists("Wiki Space", new_space_route):
-		frappe.throw(f"Wiki Space <b>{new_space_route}</b> already exists.")
+		sidebar = self.wiki_sidebars
+		if not sidebar:
+			return
 
-	items = frappe.get_all(
-		"Wiki Group Item",
-		filters={"parent": name},
-		fields=["wiki_page", "parent_label"],
-		order_by="idx asc",
-	)
+		groups, group_order = self._group_sidebar_items(sidebar)
 
-	cloned_wiki_space = frappe.new_doc("Wiki Space")
-	cloned_wiki_space.route = new_space_route
+		for sort_order, group_label in enumerate(group_order):
+			self._create_group_with_pages(group_label, groups[group_label], sort_order)
 
-	for idx, item in enumerate(items, 1):
-		frappe.publish_progress(
-			idx * 100 / len(items),
-			title=f"Cloning into new Wiki Space <b>{new_space_route}</b>",
-			description=f"{idx}/{len(items)}",
-		)
-		cloned_doc = frappe.get_doc("Wiki Page", item.wiki_page).clone(route, new_space_route)
-		cloned_wiki_space.append(
-			"wiki_sidebars",
+		self.save()
+
+	def _group_sidebar_items(self, sidebar):
+		"""Group sidebar items by parent_label while maintaining order"""
+		groups = {}
+		group_order = []
+		for item in sorted(sidebar, key=lambda x: x.idx):
+			if item.parent_label not in groups:
+				groups[item.parent_label] = []
+				group_order.append(item.parent_label)
+			groups[item.parent_label].append(item)
+		return groups, group_order
+
+	def _create_group_with_pages(self, group_label, items, sort_order):
+		"""Create a group Wiki Document and its child page documents"""
+		group_doc = frappe.get_doc(
 			{
-				"wiki_page": cloned_doc.name,
-				"parent_label": item.parent_label,
-			},
+				"doctype": "Wiki Document",
+				"title": group_label,
+				"route": f"{self.route}/{frappe.scrub(group_label).replace('_', '-')}",
+				"is_group": 1,
+				"is_published": 1,
+				"content": "",
+				"parent_wiki_document": self.root_group,
+				"sort_order": sort_order,
+			}
 		)
+		group_doc.insert(ignore_permissions=True)
 
-	cloned_wiki_space.insert()
+		for page_sort_order, item in enumerate(items):
+			self._create_page_document(item.wiki_page, group_doc.name, page_sort_order)
 
-	return cloned_wiki_space
-
-
-@frappe.whitelist()
-def update_sidebar(sidebar_items):
-	sidebars = json.loads(sidebar_items)
-
-	sidebar_items = sidebars.items()
-	if sidebar_items:
-		idx = 0
-		for sidebar, items in sidebar_items:
-			for item in items:
-				idx += 1
-				frappe.db.set_value(
-					"Wiki Group Item", {"wiki_page": str(item["name"])}, {"parent_label": sidebar, "idx": idx}
-				)
-
-	for key in frappe.cache().hgetall("wiki_sidebar").keys():
-		frappe.cache().hdel("wiki_sidebar", key)
+	def _create_page_document(self, wiki_page_name, parent_group, sort_order):
+		"""Create a leaf Wiki Document from a Wiki Page"""
+		wiki_page = frappe.get_cached_doc("Wiki Page", wiki_page_name)
+		leaf_doc = frappe.get_doc(
+			{
+				"doctype": "Wiki Document",
+				"title": wiki_page.title,
+				"route": wiki_page.route,
+				"is_group": 0,
+				"is_published": wiki_page.published,
+				"is_private": not wiki_page.allow_guest,
+				"content": wiki_page.content,
+				"parent_wiki_document": parent_group,
+				"sort_order": sort_order,
+			}
+		)
+		leaf_doc.insert(ignore_permissions=True)

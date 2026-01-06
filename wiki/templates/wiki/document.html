@@ -1,0 +1,251 @@
+{% extends "templates/wiki/layout.html" %}
+{% from "templates/wiki/macros/buttons.html" import render_icon, page_actions_dropdown, page_action_item, dropdown_end %}
+
+{% block title %}
+    {{ doc.title }}
+{% endblock %}
+
+{% block body %}
+<div x-data="wikiPage" x-init="$store.navigation.init()" class="w-full min-w-0 xl:pr-72">
+    <!-- Main Content -->
+    <article class="w-full min-w-0 transition-all duration-300 xl:max-w-[80ch] mx-auto"
+             :class="{ 'opacity-50': $store.navigation.loading, 'xl:!max-w-[100ch]': $store.sidebar?.isCollapsed }">
+        <!-- Page Header -->
+        <header class="py-6 mb-8">
+            <!-- Mobile: Edit above title -->
+            <div class="flex justify-start mb-8 sm:hidden">
+                {{ page_actions_dropdown(edit_href=doc.get_edit_link(), edit_text="Edit") }}
+                    {{ page_action_item(text="Copy page", description="Copy page as Markdown for LLMs", icon="clipboard", click="copyMarkdown(); open = false") }}
+                    {{ page_action_item(text="Open in ChatGPT", description="Ask ChatGPT about this page", icon="openai", href_expr="getAIUrl('openai')", target="_blank") }}
+                    {{ page_action_item(text="Open in Claude", description="Ask Claude about this page", icon="claude", href_expr="getAIUrl('claude')", target="_blank") }}
+                {{ dropdown_end() }}
+            </div>
+            <div class="flex items-center justify-between gap-4">
+                <h1 id="wiki-page-title" class="text-2xl font-bold text-[var(--ink-gray-9)]">{{ doc.title }}</h1>
+
+                <!-- Desktop: Edit beside title -->
+                <div class="hidden sm:block">
+                    {{ page_actions_dropdown(edit_href=doc.get_edit_link(), edit_text="Edit") }}
+                        {{ page_action_item(text="Copy page", description="Copy page as Markdown for LLMs", icon="clipboard", click="copyMarkdown(); open = false") }}
+                        {{ page_action_item(text="Open in ChatGPT", description="Ask ChatGPT about this page", icon="openai", href_expr="getAIUrl('openai')", target="_blank") }}
+                        {{ page_action_item(text="Open in Claude", description="Ask Claude about this page", icon="claude", href_expr="getAIUrl('claude')", target="_blank") }}
+                    {{ dropdown_end() }}
+                </div>
+            </div>
+        </header>
+
+        <!-- Page Content -->
+        <div class="prose max-w-none" id="wiki-content">
+            {{ rendered_content | safe }}
+        </div>
+
+        <!-- Previous/Next Navigation -->
+        <nav id="wiki-nav-buttons" class="mt-12 pt-8 border-t border-[var(--outline-gray-1)]">
+            {% if prev_doc or next_doc %}
+            <div class="flex flex-col sm:flex-row sm:items-stretch gap-4 {{ 'sm:justify-between' if prev_doc and next_doc else ('sm:justify-start' if prev_doc else 'sm:justify-end') }}">
+                {% if prev_doc %}
+                <a href="/{{ prev_doc.route }}"
+                   @click.prevent="$store.navigation.navigateTo('{{ prev_doc.route }}')"
+                   @mouseenter="$store.navigation.prefetch('{{ prev_doc.route }}')"
+                   class="group sm:flex-1 flex items-center gap-3 p-4 rounded-lg border border-[var(--outline-gray-1)] hover:border-[var(--outline-gray-2)] hover:bg-[var(--surface-gray-1)] transition-all duration-200 no-underline sm:max-w-[50%] overflow-hidden">
+                    {{ render_icon("chevron-left", "w-5 h-5 text-[var(--ink-gray-4)] group-hover:text-[var(--ink-gray-6)] transition-colors shrink-0") }}
+                    <div class="flex flex-col min-w-0">
+                        <span class="text-xs font-medium text-[var(--ink-gray-4)] uppercase tracking-wide">Previous Page</span>
+                        <span class="text-sm font-medium text-[var(--ink-gray-7)] group-hover:text-[var(--ink-gray-9)] transition-colors sm:truncate">{{ prev_doc.title }}</span>
+                    </div>
+                </a>
+                {% endif %}
+
+                {% if next_doc %}
+                <a href="/{{ next_doc.route }}"
+                   @click.prevent="$store.navigation.navigateTo('{{ next_doc.route }}')"
+                   @mouseenter="$store.navigation.prefetch('{{ next_doc.route }}')"
+                   class="group sm:flex-1 flex items-center gap-3 p-4 rounded-lg border border-[var(--outline-gray-1)] hover:border-[var(--outline-gray-2)] hover:bg-[var(--surface-gray-1)] transition-all duration-200 no-underline sm:max-w-[50%] overflow-hidden {{ 'sm:ml-auto' if not prev_doc else '' }}">
+                    <div class="flex flex-col items-end min-w-0 ml-auto">
+                        <span class="text-xs font-medium text-[var(--ink-gray-4)] uppercase tracking-wide">Next Page</span>
+                        <span class="text-sm font-medium text-[var(--ink-gray-7)] group-hover:text-[var(--ink-gray-9)] transition-colors sm:truncate text-right">{{ next_doc.title }}</span>
+                    </div>
+                    {{ render_icon("chevron-right", "w-5 h-5 text-[var(--ink-gray-4)] group-hover:text-[var(--ink-gray-6)] transition-colors shrink-0") }}
+                </a>
+                {% endif %}
+            </div>
+            {% endif %}
+        </nav>
+
+        <!-- Last Updated -->
+        <div id="wiki-last-updated" class="mt-8 text-sm text-[var(--ink-gray-5)]" title="{{ last_updated_on }}" data-timestamp="{{ last_updated_on }}">
+            Last updated {{ last_updated }}
+        </div>
+
+        <!-- Feedback Widget (Mobile/Tablet only - hidden on xl screens where it shows in TOC sidebar) -->
+        {% if wiki_space and wiki_space.enable_feedback_collection %}
+        <div class="xl:hidden">
+            {% include "templates/wiki/includes/feedback_widget.html" %}
+        </div>
+        {% endif %}
+    </article>
+
+    {% include "templates/wiki/includes/toc.html" %}
+</div>
+
+<script>
+    // Initialize page content store and wikiPage component for reactive updates during navigation
+    document.addEventListener('alpine:init', () => {
+        Alpine.store('pageContent', {
+            markdown: {{ raw_markdown | tojson }}
+        });
+
+        // Combined component for wiki document page (wikiDocument + tocScrollSpy)
+        Alpine.data('wikiPage', () => ({
+            // wikiDocument properties
+            copied: false,
+
+            get markdown() {
+                return this.$store.pageContent?.markdown || '';
+            },
+
+            copyMarkdown() {
+                navigator.clipboard.writeText(this.markdown).then(() => {
+                    this.copied = true;
+                    setTimeout(() => {
+                        this.copied = false;
+                    }, 2000);
+                }).catch(err => {
+                    console.error('Failed to copy markdown:', err);
+                });
+            },
+
+            getAIUrl(provider) {
+                const pageUrl = window.location.href;
+                const prompt = `I'm currently browsing this web page: ${pageUrl}\n\nPlease answer any questions I have based on the content of this page.`;
+                const encodedPrompt = encodeURIComponent(prompt);
+                const urls = {
+                    'claude': `https://claude.ai/new?q=${encodedPrompt}`,
+                    'openai': `https://chatgpt.com/?q=${encodedPrompt}`,
+                    't3': `https://t3.chat/new?q=${encodedPrompt}`,
+                    'perplexity': `https://www.perplexity.ai/search?q=${encodedPrompt}`
+                };
+                return urls[provider] || '#';
+            },
+
+            // tocScrollSpy properties
+            headings: [],
+            activeId: '',
+            observer: null,
+
+            init() {
+                this.extractHeadings('wiki-content');
+                this.setupScrollSpy();
+
+                // Register refresh callback with store
+                Alpine.store('toc').setRefreshCallback(() => {
+                    this.refresh();
+                });
+            },
+
+            refresh() {
+                // Disconnect existing observer
+                if (this.observer) {
+                    this.observer.disconnect();
+                }
+
+                // Re-extract headings and setup scroll spy
+                this.extractHeadings('wiki-content');
+                this.setupScrollSpy();
+            },
+
+            extractHeadings(contentId) {
+                const content = document.getElementById(contentId);
+                if (!content) return;
+
+                const headingElements = content.querySelectorAll('h2, h3');
+                this.headings = Array.from(headingElements).map((heading, index) => {
+                    // Ensure heading has an ID for linking
+                    if (!heading.id) {
+                        heading.id = `heading-${index}`;
+                    }
+                    // Get text before adding anchor
+                    const text = heading.textContent.trim();
+                    // Add anchor link if not already present
+                    this.addAnchorLink(heading);
+                    return {
+                        id: heading.id,
+                        text: text,
+                        level: parseInt(heading.tagName.charAt(1))
+                    };
+                });
+
+                // Set initial active heading
+                if (this.headings.length > 0) {
+                    this.activeId = this.headings[0].id;
+                } else {
+                    this.activeId = '';
+                }
+            },
+
+            setupScrollSpy() {
+                if (this.headings.length === 0) return;
+
+                const options = {
+                    root: null,
+                    rootMargin: '-80px 0px -70% 0px',
+                    threshold: 0
+                };
+
+                this.observer = new IntersectionObserver((entries) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            this.activeId = entry.target.id;
+                        }
+                    });
+                }, options);
+
+                this.headings.forEach(heading => {
+                    const element = document.getElementById(heading.id);
+                    if (element) {
+                        this.observer.observe(element);
+                    }
+                });
+            },
+
+            scrollToHeading(id) {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    // Update active immediately for better UX
+                    this.activeId = id;
+                    // Update URL hash without jumping
+                    history.pushState(null, null, `#${id}`);
+                }
+            },
+
+            addAnchorLink(heading) {
+                // Skip if anchor already exists
+                if (heading.querySelector('.heading-anchor')) return;
+
+                const anchor = document.createElement('a');
+                anchor.href = `#${heading.id}`;
+                anchor.className = 'heading-anchor';
+                anchor.setAttribute('aria-label', `Link to ${heading.textContent.trim()}`);
+                anchor.textContent = '#';
+
+                const self = this;
+                anchor.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    self.scrollToHeading(heading.id);
+                    // Copy URL to clipboard
+                    navigator.clipboard.writeText(window.location.origin + window.location.pathname + `#${heading.id}`);
+                });
+
+                heading.insertBefore(anchor, heading.firstChild);
+            },
+
+            destroy() {
+                if (this.observer) {
+                    this.observer.disconnect();
+                }
+            }
+        }));
+    });
+</script>
+{% endblock %}

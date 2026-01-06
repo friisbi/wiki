@@ -1,0 +1,324 @@
+# Copyright (c) 2025, Frappe and Contributors
+# See license.txt
+
+import unittest
+
+from wiki.wiki.markdown import render_markdown
+
+
+class TestMarkdownRenderer(unittest.TestCase):
+	"""Tests for the custom markdown renderer."""
+
+	def test_basic_markdown(self):
+		"""Test basic markdown rendering."""
+		result = render_markdown("**bold** and *italic*")
+		self.assertIn("<strong>bold</strong>", result)
+		self.assertIn("<em>italic</em>", result)
+
+	def test_empty_content(self):
+		"""Test empty content returns empty string."""
+		self.assertEqual(render_markdown(""), "")
+		self.assertEqual(render_markdown(None), "")
+
+	def test_headings(self):
+		"""Test heading rendering."""
+		result = render_markdown("# Heading 1\n## Heading 2")
+		self.assertIn("<h1>Heading 1</h1>", result)
+		self.assertIn("<h2>Heading 2</h2>", result)
+
+	def test_links(self):
+		"""Test link rendering."""
+		result = render_markdown("[Link text](https://example.com)")
+		self.assertIn('href="https://example.com"', result)
+		self.assertIn("Link text", result)
+
+
+class TestImageCaptionSupport(unittest.TestCase):
+	"""Tests for image caption support in markdown.
+
+	Captions use the Stack Overflow pattern:
+	![alt text](image.jpg)
+	*caption text*
+
+	This renders as <p><img ...><em>caption</em></p> (no blank line between).
+	The alt text is for accessibility; caption is separate emphasized text.
+	"""
+
+	def test_image_with_caption_pattern(self):
+		"""Test image with caption on next line (no blank line)."""
+		# No blank line between image and caption
+		content = """![Alt text](/files/test.jpg)
+*This is the caption*"""
+		result = render_markdown(content)
+
+		# Should have image with alt
+		self.assertIn('<img src="/files/test.jpg"', result)
+		self.assertIn('alt="Alt text"', result)
+
+		# Should have em for caption (styled via CSS img + em)
+		self.assertIn("<em>This is the caption</em>", result)
+
+		# Should NOT have figure/figcaption (old pattern)
+		self.assertNotIn("<figure", result)
+		self.assertNotIn("<figcaption", result)
+
+	def test_image_without_caption(self):
+		"""Test that images without caption render as simple img tags."""
+		result = render_markdown("![](/files/test.jpg)")
+
+		# Should NOT have figure wrapper
+		self.assertNotIn("<figure", result)
+		self.assertNotIn("<figcaption", result)
+
+		# Should have simple image
+		self.assertIn('<img src="/files/test.jpg"', result)
+
+	def test_image_with_title(self):
+		"""Test that images with title attribute render correctly."""
+		result = render_markdown('![Alt text](/files/test.jpg "Image title")')
+
+		# Should have image with alt and title
+		self.assertIn('alt="Alt text"', result)
+		self.assertIn('title="Image title"', result)
+
+		# Should NOT have figure/figcaption
+		self.assertNotIn("<figure", result)
+		self.assertNotIn("<figcaption", result)
+
+	def test_image_alt_escapes_html(self):
+		"""Test that alt text is properly escaped."""
+		result = render_markdown("![<script>alert('xss')</script>](/files/test.jpg)")
+
+		# Script tags should be escaped, not rendered as HTML
+		self.assertNotIn("<script>alert", result)
+
+	def test_multiple_images_with_captions(self):
+		"""Test multiple images with captions."""
+		content = """![First image](/files/first.jpg)
+*Caption for first image*
+
+Some text between images.
+
+![Second image](/files/second.jpg)
+*Caption for second image*"""
+		result = render_markdown(content)
+
+		# Both images should be rendered
+		self.assertIn('<img src="/files/first.jpg"', result)
+		self.assertIn('<img src="/files/second.jpg"', result)
+
+		# Both captions should be in em tags
+		self.assertIn("<em>Caption for first image</em>", result)
+		self.assertIn("<em>Caption for second image</em>", result)
+
+	def test_image_caption_separated_by_blank_line(self):
+		"""Test that blank line between image and caption separates them."""
+		# Blank line between image and caption - they become separate paragraphs
+		content = """![Alt text](/files/test.jpg)
+
+*This is NOT a caption, just italic text*"""
+		result = render_markdown(content)
+
+		# Both should render, but in separate paragraphs
+		self.assertIn('<img src="/files/test.jpg"', result)
+		self.assertIn("<em>This is NOT a caption, just italic text</em>", result)
+
+
+class TestCalloutRendering(unittest.TestCase):
+	"""Tests for callout/aside rendering.
+
+	Note: Callouts use a preprocessing step before markdown rendering.
+	The callout must start at the beginning of a line in the document.
+	"""
+
+	def test_note_callout(self):
+		"""Test note callout rendering."""
+		# Callout must be at start of document or after blank line
+		content = """:::note
+This is a note
+:::
+"""
+		result = render_markdown(content)
+		self.assertIn("callout-note", result)
+		self.assertIn("This is a note", result)
+
+	def test_tip_callout(self):
+		"""Test tip callout rendering."""
+		content = """:::tip
+This is a tip
+:::
+"""
+		result = render_markdown(content)
+		self.assertIn("callout-tip", result)
+
+	def test_caution_callout(self):
+		"""Test caution callout rendering."""
+		content = """:::caution
+Be careful
+:::
+"""
+		result = render_markdown(content)
+		self.assertIn("callout-caution", result)
+
+	def test_danger_callout(self):
+		"""Test danger callout rendering."""
+		content = """:::danger
+Dangerous!
+:::
+"""
+		result = render_markdown(content)
+		self.assertIn("callout-danger", result)
+
+	def test_warning_callout_maps_to_caution(self):
+		"""Test warning is alias for caution."""
+		content = """:::warning
+Warning text
+:::
+"""
+		result = render_markdown(content)
+		self.assertIn("callout-caution", result)
+
+	def test_callout_with_custom_title(self):
+		"""Test callout with custom title."""
+		content = """:::note[Custom Title]
+Content
+:::
+"""
+		result = render_markdown(content)
+		self.assertIn("Custom Title", result)
+
+
+class TestComplexMarkdownContent(unittest.TestCase):
+	"""Tests for complex markdown content with callouts and images."""
+
+	def test_markdown_with_callouts_and_images(self):
+		"""Test markdown content with callouts and images that have spaces in URLs.
+
+		The renderer should automatically URL-encode spaces in image URLs.
+		"""
+		# Note: URLs have UNENCODED spaces - the renderer should handle this
+		content = """## Method 1: Download and Install from Windows PC (USB)
+
+:::note
+This is the recommended method for Windows users
+:::
+
+:::warning
+You need a USB drive with at least 8GB of storage for this method.
+:::
+
+Once you have installed the app, you will need to set up your account. Visit your newly created site that has the app installed, and you should see a setup wizard.
+
+![Screenshot 2024-05-16 at 3.55.11 PM](/files/Screenshot 2024-05-16 at 3.55.11 PM.png)
+*Setup wizard screenshot*
+
+To complete the setup you will need to enter basic information like your country, name, email, and password. Make sure to remember your email and password as this is going to be your admin account.
+
+Once you complete the setup wizard, you will be redirected to the workspace of the Learning app. The top section of the workspace provides some important quick links. You can visit the Learning Portal and start setting up your very first course. The workspace also has some important charts. They show the count of daily signups and enrollments on the LMS.
+
+![Screenshot 2024-05-16 at 3.57.40 PM](/files/Screenshot 2024-05-16 at 3.57.40 PM.png)
+*Workspace screenshot*
+
+Some text after."""
+
+		result = render_markdown(content)
+
+		# Check headings
+		self.assertIn("<h2>Method 1: Download and Install from Windows PC (USB)</h2>", result)
+
+		# Check callouts
+		self.assertIn("callout-note", result)
+		self.assertIn("This is the recommended method for Windows users", result)
+		self.assertIn("callout-caution", result)  # warning maps to caution
+		self.assertIn("You need a USB drive with at least 8GB of storage for this method.", result)
+
+		# Check images are rendered (spaces in URLs automatically encoded to %20)
+		self.assertIn('<img src="/files/Screenshot%202024-05-16%20at%203.55.11%20PM.png"', result)
+		self.assertIn('alt="Screenshot 2024-05-16 at 3.55.11 PM"', result)
+
+		self.assertIn('<img src="/files/Screenshot%202024-05-16%20at%203.57.40%20PM.png"', result)
+		self.assertIn('alt="Screenshot 2024-05-16 at 3.57.40 PM"', result)
+
+		# Check captions are rendered as em tags
+		self.assertIn("<em>Setup wizard screenshot</em>", result)
+		self.assertIn("<em>Workspace screenshot</em>", result)
+
+		# Should NOT use figure/figcaption pattern
+		self.assertNotIn("<figure", result)
+		self.assertNotIn("<figcaption", result)
+
+		# Ensure images are NOT rendered as broken !<a> syntax
+		self.assertNotIn("!<a href=", result)
+		self.assertNotIn(">Screenshot 2024-05-16 at 3.55.11 PM</a>", result)
+
+
+class TestImageUrlSpaceEncoding(unittest.TestCase):
+	"""Tests for automatic URL-encoding of spaces in image URLs."""
+
+	def test_simple_image_with_spaces(self):
+		"""Test that spaces in image URLs are automatically encoded."""
+		content = "![My Image](/files/my image.png)"
+		result = render_markdown(content)
+
+		self.assertIn('<img src="/files/my%20image.png"', result)
+		self.assertIn('alt="My Image"', result)
+		self.assertNotIn("![My Image]", result)
+
+		# Should NOT use figure/figcaption
+		self.assertNotIn("<figure", result)
+		self.assertNotIn("<figcaption", result)
+
+	def test_image_with_title_and_spaces(self):
+		"""Test image with title attribute and spaces in URL."""
+		content = '![Alt Text](/files/path with spaces/image.png "Image Title")'
+		result = render_markdown(content)
+
+		self.assertIn('<img src="/files/path%20with%20spaces/image.png"', result)
+		self.assertIn('alt="Alt Text"', result)
+		self.assertIn('title="Image Title"', result)
+
+		# Should NOT use figure/figcaption
+		self.assertNotIn("<figure", result)
+		self.assertNotIn("<figcaption", result)
+
+	def test_already_encoded_url_unchanged(self):
+		"""Test that already URL-encoded URLs are not double-encoded."""
+		content = "![My Image](/files/my%20image.png)"
+		result = render_markdown(content)
+
+		# Should not double-encode %20 to %2520
+		self.assertIn('<img src="/files/my%20image.png"', result)
+		self.assertNotIn("%2520", result)
+
+
+class TestTableRendering(unittest.TestCase):
+	"""Tests for table rendering."""
+
+	def test_basic_table(self):
+		"""Test basic table rendering."""
+		content = """
+| Header 1 | Header 2 |
+| -------- | -------- |
+| Cell 1   | Cell 2   |
+"""
+		result = render_markdown(content)
+		self.assertIn("<table>", result)
+		self.assertIn("<th>", result)
+		self.assertIn("<td>", result)
+
+
+class TestTaskListRendering(unittest.TestCase):
+	"""Tests for task list rendering."""
+
+	def test_task_list(self):
+		"""Test task list rendering."""
+		content = """
+- [ ] Unchecked item
+- [x] Checked item
+"""
+		result = render_markdown(content)
+		self.assertIn('type="checkbox"', result)
+
+
+if __name__ == "__main__":
+	unittest.main()

@@ -128,5 +128,11 @@ def is_broken_link(url: str) -> bool:
 
 
 def get_request_status_code(url: str) -> int:
-	response = requests.head(url, verify=False, timeout=5)
+	# Try HEAD first (faster), fall back to GET if HEAD fails
+	# Many sites block HEAD requests or return 403/405
+	response = requests.head(url, verify=False, timeout=5, allow_redirects=True)
+	if response.status_code >= 400:
+		# HEAD failed, try GET request
+		response = requests.get(url, verify=False, timeout=5, allow_redirects=True, stream=True)
+		response.close()  # Close connection immediately, we only need status code
 	return response.status_code

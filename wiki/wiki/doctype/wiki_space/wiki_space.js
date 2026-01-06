@@ -10,6 +10,20 @@ frappe.ui.form.on("Wiki Space", {
         frm.call("clone_wiki_space_in_background", { new_space_route: value });
       });
     });
+
+    if (!frm.doc.root_group) {
+      frm.add_custom_button(__("Migrate to Version 3"), () => {
+      frappe.confirm(
+        __("This will migrate the sidebar to tree-based Wiki Documents. Continue?"),
+        () => {
+          frm.call("migrate_to_v3").then(() => {
+            frappe.msgprint(__("Migration completed successfully."));
+            frm.reload_doc();
+          });
+        }
+      );
+    });
+    }
   },
 
   onload_post_render: function (frm) {
