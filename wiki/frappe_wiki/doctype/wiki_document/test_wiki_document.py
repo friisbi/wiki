@@ -470,7 +470,7 @@ This is a paragraph with **bold** text.
 - List item 2
 """
 		html = render_markdown(md)
-		self.assertIn("<h1>Heading</h1>", html)
+		self.assertIn('<h1 id="heading">Heading</h1>', html)
 		self.assertIn("<strong>bold</strong>", html)
 		self.assertIn("<li>List item 1</li>", html)
 
@@ -487,7 +487,7 @@ Important note here
 And this is the conclusion.
 """
 		html = render_markdown(md)
-		self.assertIn("<h1>Introduction</h1>", html)
+		self.assertIn('<h1 id="introduction">Introduction</h1>', html)
 		self.assertIn("callout-note", html)
 		self.assertIn("Important note here", html)
 		self.assertIn("conclusion", html)
