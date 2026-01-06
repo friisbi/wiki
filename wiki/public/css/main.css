@@ -306,6 +306,12 @@
   color: var(--ink-red-4);
 }
 
+/* Ensure images don't overflow container */
+.prose img {
+  max-width: 100%;
+  height: auto;
+}
+
 /* Image caption styling using img + em pattern
    Usage in markdown:
    ![alt text](image.jpg)
