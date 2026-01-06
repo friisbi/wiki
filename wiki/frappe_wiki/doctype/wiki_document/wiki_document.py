@@ -253,7 +253,7 @@ class WikiDocument(NestedSet):
 
 		wiki_spaces_for_switcher = frappe.get_all(
 			"Wiki Space",
-			fields=["name", "space_name", "route", "light_mode_logo"],
+			fields=["name", "space_name", "route", "light_mode_logo", "app_switcher_logo"],
 			or_filters={"show_in_switcher": 1, "name": wiki_space.name},
 			order_by="space_name asc",
 		)

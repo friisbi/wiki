@@ -4,8 +4,8 @@
         x-data>
     {# Wiki Space Logo and Name - matches sidebar width (18rem) #}
     <div class="w-72 flex items-center gap-3 flex-shrink-0 px-6 border-r border-[var(--outline-gray-1)]">
-        {% if wiki_space.light_mode_logo %}
-        <img class="size-7 flex-shrink-0" src="{{ wiki_space.light_mode_logo }}"/>
+        {% if wiki_space.app_switcher_logo %}
+        <img class="size-7 flex-shrink-0" src="{{ wiki_space.app_switcher_logo }}"/>
         {% endif %}
         <span class="text-base font-semibold text-[var(--ink-gray-9)] truncate">{{ wiki_space.space_name or _("Wiki") }}</span>
         {% if wiki_spaces_for_switcher and wiki_spaces_for_switcher|length > 1 %}

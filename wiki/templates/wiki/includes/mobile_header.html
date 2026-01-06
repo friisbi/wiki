@@ -127,8 +127,8 @@
         <!-- Bottom Sheet Header -->
         <div class="px-4 pb-3 border-b border-[var(--outline-gray-1)] flex items-center justify-between">
             <div class="flex items-center gap-3 flex-1 min-w-0">
-                {% if wiki_space.light_mode_logo %}
-                <img class="size-7 flex-shrink-0" src="{{ wiki_space.light_mode_logo }}"/>
+                {% if wiki_space.app_switcher_logo %}
+                <img class="size-7 flex-shrink-0" src="{{ wiki_space.app_switcher_logo }}"/>
                 {% endif %}
                 <h3 class="text-lg font-semibold text-[var(--ink-gray-9)] truncate">{{ wiki_space.space_name or _("Wiki") }}</h3>
                 {% if wiki_spaces_for_switcher and wiki_spaces_for_switcher|length > 1 %}
