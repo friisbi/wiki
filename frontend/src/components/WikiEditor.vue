@@ -1,6 +1,6 @@
 <template>
     <div class="wiki-editor-container">
-        <div class="wiki-tiptap-editor" v-if="editor">
+        <div v-if="editor">
             <WikiToolbar :editor="editor" @uploadImage="handleImageUpload" />
             <WikiBubbleMenu :editor="editor" />
             <EditorContent :editor="editor" />
@@ -435,7 +435,7 @@ function initEditor() {
             handlePaste,
             handleDrop,
             attributes: {
-                class: 'prose max-w-none prose-code:before:content-none prose-code:after:content-none prose-code:bg-transparent prose-code:p-0 prose-code:font-normal prose-table:table-fixed prose-td:p-2 prose-th:p-2 prose-td:border prose-th:border prose-td:border-outline-gray-2 prose-th:border-outline-gray-2 prose-td:relative prose-th:relative prose-th:bg-surface-gray-2 wiki-editor-content',
+                class: 'prose prose-sm max-w-none prose-code:before:content-none prose-code:after:content-none prose-code:bg-transparent prose-code:p-0 prose-code:font-normal prose-table:table-fixed prose-td:p-2 prose-th:p-2 prose-td:border prose-th:border prose-td:border-outline-gray-2 prose-th:border-outline-gray-2 prose-td:relative prose-th:relative prose-th:bg-surface-gray-2 wiki-editor-content',
             },
         },
         onUpdate: () => {
@@ -606,93 +606,6 @@ onUnmounted(() => {
 
 .wiki-editor-content:focus {
     outline: none;
-}
-
-/* Placeholder */
-.wiki-editor-content p.is-editor-empty:first-child::before {
-    content: attr(data-placeholder);
-    float: left;
-    color: var(--ink-gray-4, #9ca3af);
-    pointer-events: none;
-    height: 0;
-}
-
-/* Heading styles */
-.wiki-editor-content h1,
-.wiki-editor-content h2,
-.wiki-editor-content h3,
-.wiki-editor-content h4,
-.wiki-editor-content h5,
-.wiki-editor-content h6 {
-    font-weight: 600;
-    line-height: 1.25;
-    margin-top: 1.5rem;
-    margin-bottom: 0.75rem;
-}
-
-.wiki-editor-content h1 {
-    font-size: 1.875rem;
-}
-
-.wiki-editor-content h2 {
-    font-size: 1.5rem;
-}
-
-.wiki-editor-content h3 {
-    font-size: 1.25rem;
-}
-
-.wiki-editor-content h4 {
-    font-size: 1.125rem;
-}
-
-/* Paragraph styling */
-.wiki-editor-content p {
-    margin: 0.75rem 0;
-}
-
-/* List styling */
-.wiki-editor-content ul,
-.wiki-editor-content ol {
-    padding-left: 1.5rem;
-    margin: 0.5rem 0;
-}
-
-.wiki-editor-content li {
-    margin: 0.25rem 0;
-}
-
-.wiki-editor-content ul {
-    list-style-type: disc;
-}
-
-.wiki-editor-content ol {
-    list-style-type: decimal;
-}
-
-/* Task list styling */
-.wiki-editor-content ul[data-type="taskList"] {
-    list-style: none;
-    padding-left: 0;
-}
-
-.wiki-editor-content ul[data-type="taskList"] li {
-    display: flex;
-    align-items: flex-start;
-    gap: 0.5rem;
-}
-
-.wiki-editor-content ul[data-type="taskList"] li > label {
-    flex-shrink: 0;
-    margin-top: 0.25rem;
-}
-
-.wiki-editor-content ul[data-type="taskList"] li > div {
-    flex: 1;
-}
-
-.wiki-editor-content ul[data-type="taskList"] input[type="checkbox"] {
-    accent-color: var(--primary, #171717);
 }
 
 /* Code block styling - Light theme */
